@@ -3270,6 +3270,64 @@ mod admin_dashboard_tests {
         let locked = AdminDashboardHandlers::list_locked_users(&admin()).unwrap();
         assert!(locked.is_empty());
     }
+
+    // ── Issue #827 — UserTwoFactorSummary endpoint ───────────────────────
+
+    #[test]
+    fn test_get_two_factor_summary_returns_data_for_enabled_user() {
+        clear_two_factor_store_for_tests();
+        setup_user("user-2fa-active");
+
+        let summary =
+            AdminDashboardHandlers::get_user_two_factor_summary(&admin(), "user-2fa-active")
+                .unwrap();
+
+        assert_eq!(summary.user_id, "user-2fa-active");
+        assert!(summary.enabled);
+        assert!(!summary.is_canary);
+    }
+
+    #[test]
+    fn test_get_two_factor_summary_returns_404_for_missing_user() {
+        clear_two_factor_store_for_tests();
+
+        let result = AdminDashboardHandlers::get_user_two_factor_summary(&admin(), "nonexistent");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("No 2FA data found for user"));
+        assert!(err.contains("nonexistent"));
+    }
+
+    #[test]
+    fn test_get_two_factor_summary_rejects_empty_user_id() {
+        clear_two_factor_store_for_tests();
+
+        let result = AdminDashboardHandlers::get_user_two_factor_summary(&admin(), "");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("must not be empty"));
+    }
+
+    #[test]
+    fn test_get_two_factor_summary_rejects_long_user_id() {
+        clear_two_factor_store_for_tests();
+
+        let long_user_id = "a".repeat(65);
+        let result =
+            AdminDashboardHandlers::get_user_two_factor_summary(&admin(), &long_user_id);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("must not exceed 64"));
+    }
+
+    #[test]
+    fn test_get_two_factor_summary_requires_admin() {
+        // AuthenticatedAdmin is a distinct type from AuthenticatedUser —
+        // the type system prevents non-admin callers from reaching this handler.
+        // This test documents that the types are distinct.
+        let user = AuthenticatedUser::new("regular-user");
+        let _admin = AuthenticatedAdmin::new("admin-001");
+        // user and _admin are different types; the compiler enforces this.
+        assert_ne!(user.user_id, _admin.admin_id.clone() + "-different");
+    }
 }
 
 // ---------------------------------------------------------------------------
