@@ -6,8 +6,6 @@ edition = "2021"
 [dependencies]
 totp-rs = { version = "=5.7.1", features = ["qr", "otpauth", "gen_secret"] }
 rand = "=0.8.5"
-totp-rs = { version = "5.7.1", features = ["qr", "otpauth", "gen_secret"] }
-rand = "0.8"
 aes-gcm = { version = "0.10.3", features = ["aes"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -34,9 +32,20 @@ url = "2"
 aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-sdk-secretsmanager = "1"
 
+[dev-dependencies]
+criterion = { version = "=0.5.1", features = ["html_reports"] }
+
 [features]
 webhook-client = []
 
 [[example]]
 name = "example_integration"
 path = "examples/example_integration.rs"
+
+[[bench]]
+name = "totp_verification"
+harness = false
+
+[[bench]]
+name = "rate_limiter"
+harness = false
