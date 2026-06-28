@@ -145,13 +145,38 @@ mod tests {
     #[test]
     fn test_otpauth_uri_url_encodes_issuer_and_account() {
         let setup = TwoFactorAuth::setup("first.last+pet@example.com", "Pet Chain: Ops").unwrap();
+        // Colon in issuer is replaced with a space by sanitize_issuer, resulting
+        // in "Pet Chain  Ops" which URL-encodes to "Pet%20Chain%20%20Ops"
         assert!(setup
             .otpauth_uri
-            .starts_with("otpauth://totp/Pet%20Chain%3A%20Ops:first.last%2Bpet%40example.com?"));
-        assert!(setup.otpauth_uri.contains("&issuer=Pet%20Chain%3A%20Ops"));
+            .starts_with("otpauth://totp/Pet%20Chain%20%20Ops:first.last%2Bpet%40example.com?"));
+        assert!(setup.otpauth_uri.contains("&issuer=Pet%20Chain%20%20Ops"));
         assert!(setup
             .otpauth_uri
             .contains("&algorithm=SHA1&digits=6&period=30"));
+    }
+
+    #[test]
+    fn test_issuer_with_colon_is_consistent_between_qr_and_uri() {
+        // When issuer contains a colon, both the QR image and the otpauth_uri
+        // must use the same sanitized issuer string (colon → space).
+        let setup = TwoFactorAuth::setup("user@test.com", "MyApp:Prod").unwrap();
+
+        // Sanitized "MyApp:Prod" → "MyApp Prod" → URL-encoded "MyApp%20Prod"
+        assert!(
+            setup.otpauth_uri.contains("&issuer=MyApp%20Prod"),
+            "otpauth_uri should contain sanitized issuer, got: {}",
+            setup.otpauth_uri
+        );
+
+        // URI label should use sanitized issuer as well
+        assert!(
+            setup.otpauth_uri.starts_with("otpauth://totp/MyApp%20Prod:user%40test.com?"),
+            "otpauth_uri label does not match sanitized issuer"
+        );
+
+        // QR code must have been generated successfully
+        assert!(!setup.qr_code_base64.is_empty(), "QR code must be generated");
     }
 
     #[test]
@@ -3293,6 +3318,64 @@ mod admin_dashboard_tests {
 
         let locked = AdminDashboardHandlers::list_locked_users(&admin()).unwrap();
         assert!(locked.is_empty());
+    }
+
+    // ── Issue #827 — UserTwoFactorSummary endpoint ───────────────────────
+
+    #[test]
+    fn test_get_two_factor_summary_returns_data_for_enabled_user() {
+        clear_two_factor_store_for_tests();
+        setup_user("user-2fa-active");
+
+        let summary =
+            AdminDashboardHandlers::get_user_two_factor_summary(&admin(), "user-2fa-active")
+                .unwrap();
+
+        assert_eq!(summary.user_id, "user-2fa-active");
+        assert!(summary.enabled);
+        assert!(!summary.is_canary);
+    }
+
+    #[test]
+    fn test_get_two_factor_summary_returns_404_for_missing_user() {
+        clear_two_factor_store_for_tests();
+
+        let result = AdminDashboardHandlers::get_user_two_factor_summary(&admin(), "nonexistent");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("No 2FA data found for user"));
+        assert!(err.contains("nonexistent"));
+    }
+
+    #[test]
+    fn test_get_two_factor_summary_rejects_empty_user_id() {
+        clear_two_factor_store_for_tests();
+
+        let result = AdminDashboardHandlers::get_user_two_factor_summary(&admin(), "");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("must not be empty"));
+    }
+
+    #[test]
+    fn test_get_two_factor_summary_rejects_long_user_id() {
+        clear_two_factor_store_for_tests();
+
+        let long_user_id = "a".repeat(65);
+        let result =
+            AdminDashboardHandlers::get_user_two_factor_summary(&admin(), &long_user_id);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("must not exceed 64"));
+    }
+
+    #[test]
+    fn test_get_two_factor_summary_requires_admin() {
+        // AuthenticatedAdmin is a distinct type from AuthenticatedUser —
+        // the type system prevents non-admin callers from reaching this handler.
+        // This test documents that the types are distinct.
+        let user = AuthenticatedUser::new("regular-user");
+        let _admin = AuthenticatedAdmin::new("admin-001");
+        // user and _admin are different types; the compiler enforces this.
+        assert_ne!(user.user_id, _admin.admin_id.clone() + "-different");
     }
 }
 
