@@ -209,6 +209,30 @@ mod tests {
     }
 
     #[test]
+    fn test_setup_with_default_backup_code_count() {
+        // Default backup code count should be 8
+        let config = TotpConfig::default();
+        assert_eq!(config.backup_code_count, 8);
+        let result =
+            TwoFactorAuth::setup_with_config("test@petchain.com", "PetChain", config.clone());
+        assert!(result.is_ok());
+        let setup = result.unwrap();
+        assert_eq!(setup.backup_codes.len(), 8);
+    }
+
+    #[test]
+    fn test_setup_with_custom_backup_code_count() {
+        // Custom backup code count should be respected
+        let mut config = TotpConfig::default();
+        config.backup_code_count = 12;
+        let result =
+            TwoFactorAuth::setup_with_config("test@petchain.com", "PetChain", config.clone());
+        assert!(result.is_ok());
+        let setup = result.unwrap();
+        assert_eq!(setup.backup_codes.len(), 12);
+    }
+
+    #[test]
     fn test_verify_token_default_sha256() {
         let secret = TwoFactorAuth::generate_secret();
         let config = TotpConfig::default();

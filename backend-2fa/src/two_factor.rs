@@ -20,6 +20,8 @@ pub struct TotpConfig {
     pub digits: usize,
     pub period: u64,
     pub window: u8,
+    /// Number of backup codes to generate during setup (default: 8).
+    pub backup_code_count: usize,
 }
 
 impl Default for TotpConfig {
@@ -29,6 +31,7 @@ impl Default for TotpConfig {
             digits: 6,
             period: 30,
             window: 1,
+            backup_code_count: 8,
         }
     }
 }
@@ -52,6 +55,7 @@ impl TotpConfig {
             digits,
             period,
             window,
+            backup_code_count: 8,
         })
     }
 
@@ -61,6 +65,7 @@ impl TotpConfig {
             digits: 6,
             period: 30,
             window: 1,
+            backup_code_count: 8,
         }
     }
 
@@ -70,6 +75,7 @@ impl TotpConfig {
             digits: 8,
             period: 30,
             window: 1,
+            backup_code_count: 8,
         }
     }
 }
@@ -198,7 +204,7 @@ impl TwoFactorAuth {
             "data:image/png;base64,{}",
             totp.get_qr_base64().map_err(|e| e.to_string())?
         );
-        let backup_codes = Self::generate_backup_codes(8);
+        let backup_codes = Self::generate_backup_codes(config.backup_code_count);
         let otpauth_uri = Self::generate_otpauth_uri(&sanitized_issuer, user_email, &secret, &config);
 
         Ok(TwoFactorSetup {
