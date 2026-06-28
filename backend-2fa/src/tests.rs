@@ -145,13 +145,38 @@ mod tests {
     #[test]
     fn test_otpauth_uri_url_encodes_issuer_and_account() {
         let setup = TwoFactorAuth::setup("first.last+pet@example.com", "Pet Chain: Ops").unwrap();
+        // Colon in issuer is replaced with a space by sanitize_issuer, resulting
+        // in "Pet Chain  Ops" which URL-encodes to "Pet%20Chain%20%20Ops"
         assert!(setup
             .otpauth_uri
-            .starts_with("otpauth://totp/Pet%20Chain%3A%20Ops:first.last%2Bpet%40example.com?"));
-        assert!(setup.otpauth_uri.contains("&issuer=Pet%20Chain%3A%20Ops"));
+            .starts_with("otpauth://totp/Pet%20Chain%20%20Ops:first.last%2Bpet%40example.com?"));
+        assert!(setup.otpauth_uri.contains("&issuer=Pet%20Chain%20%20Ops"));
         assert!(setup
             .otpauth_uri
             .contains("&algorithm=SHA1&digits=6&period=30"));
+    }
+
+    #[test]
+    fn test_issuer_with_colon_is_consistent_between_qr_and_uri() {
+        // When issuer contains a colon, both the QR image and the otpauth_uri
+        // must use the same sanitized issuer string (colon → space).
+        let setup = TwoFactorAuth::setup("user@test.com", "MyApp:Prod").unwrap();
+
+        // Sanitized "MyApp:Prod" → "MyApp Prod" → URL-encoded "MyApp%20Prod"
+        assert!(
+            setup.otpauth_uri.contains("&issuer=MyApp%20Prod"),
+            "otpauth_uri should contain sanitized issuer, got: {}",
+            setup.otpauth_uri
+        );
+
+        // URI label should use sanitized issuer as well
+        assert!(
+            setup.otpauth_uri.starts_with("otpauth://totp/MyApp%20Prod:user%40test.com?"),
+            "otpauth_uri label does not match sanitized issuer"
+        );
+
+        // QR code must have been generated successfully
+        assert!(!setup.qr_code_base64.is_empty(), "QR code must be generated");
     }
 
     #[test]

@@ -132,6 +132,13 @@ impl TwoFactorAuth {
         encoded
     }
 
+    /// Replace colons with spaces so the issuer is consistent across QR and otpauth URI.
+    /// Colons in the issuer label conflict with the `otpauth://` URI format where the
+    /// delimiter between issuer and account is also a colon.
+    pub fn sanitize_issuer(issuer: &str) -> String {
+        issuer.replace(':', " ")
+    }
+
     pub fn generate_otpauth_uri(
         issuer: &str,
         account: &str,
@@ -173,7 +180,7 @@ impl TwoFactorAuth {
         config: TotpConfig,
     ) -> Result<TwoFactorSetup, String> {
         let secret = Self::generate_secret();
-        let qr_issuer = issuer.replace(':', " ");
+        let sanitized_issuer = Self::sanitize_issuer(issuer);
         let totp = TOTP::new(
             config.algorithm,
             config.digits,
@@ -182,7 +189,7 @@ impl TwoFactorAuth {
             Secret::Encoded(secret.clone())
                 .to_bytes()
                 .map_err(|e| e.to_string())?,
-            Some(qr_issuer),
+            Some(sanitized_issuer.clone()),
             user_email.to_string(),
         )
         .map_err(|e| e.to_string())?;
@@ -192,7 +199,7 @@ impl TwoFactorAuth {
             totp.get_qr_base64().map_err(|e| e.to_string())?
         );
         let backup_codes = Self::generate_backup_codes(8);
-        let otpauth_uri = Self::generate_otpauth_uri(issuer, user_email, &secret, &config);
+        let otpauth_uri = Self::generate_otpauth_uri(&sanitized_issuer, user_email, &secret, &config);
 
         Ok(TwoFactorSetup {
             secret,
