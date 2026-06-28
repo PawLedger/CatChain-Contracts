@@ -909,6 +909,29 @@ impl AdminDashboardHandlers {
     ) -> Result<Vec<AuditLogEntry>, String> {
         two_factor_store().get_audit_log(user_id, page, page_size)
     }
+
+    /// GET /admin/users/{user_id}/2fa-summary — returns UserTwoFactorSummary.
+    pub fn get_user_two_factor_summary(
+        _admin: &AuthenticatedAdmin,
+        user_id: &str,
+    ) -> Result<UserTwoFactorSummary, String> {
+        // Validate user_id
+        if user_id.is_empty() {
+            return Err("user_id must not be empty".to_string());
+        }
+        if user_id.len() > 64 {
+            return Err("user_id must not exceed 64 characters".to_string());
+        }
+
+        let store = two_factor_store();
+        let data = store.get(user_id)?;
+        let is_canary = store.is_canary(user_id);
+        Ok(UserTwoFactorSummary {
+            user_id: user_id.to_string(),
+            enabled: data.enabled,
+            is_canary,
+        })
+    }
 }
 
 // ---------------------------------------------------------------------------
