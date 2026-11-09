@@ -26,10 +26,10 @@ use soroban_sdk::{contracttype, Address, Bytes, BytesN, Env};
 use crate::EmergencyContact;
 
 /// Domain tag for [`emergency_notification_request_id`].
-pub const EMERGENCY_NOTIFY_REQUEST_DOMAIN: &[u8] = b"petchain:emergency-notify:v1";
+pub const EMERGENCY_NOTIFY_REQUEST_DOMAIN: &[u8] = b"catchain:emergency-notify:v1";
 
 /// Domain tag for [`emergency_recipient_id`].
-pub const EMERGENCY_RECIPIENT_DOMAIN: &[u8] = b"petchain:emergency-recipient:v1";
+pub const EMERGENCY_RECIPIENT_DOMAIN: &[u8] = b"catchain:emergency-recipient:v1";
 
 /// Longest validity window a notification request may ask for. Bounds how
 /// long a captured request stays replayable as an idempotent retry.

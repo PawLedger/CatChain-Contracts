@@ -1,11 +1,11 @@
 use crate::*;
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-fn setup_env() -> (Env, PetChainContractClient<'static>, Address) {
+fn setup_env() -> (Env, CatChainContractClient<'static>, Address) {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     // Initialize admin
     let admin = Address::generate(&env);
@@ -15,7 +15,7 @@ fn setup_env() -> (Env, PetChainContractClient<'static>, Address) {
 }
 
 fn register_pet_with_species(
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     env: &Env,
     owner: &Address,
     species: Species,
@@ -34,7 +34,7 @@ fn register_pet_with_species(
     )
 }
 
-fn setup_vet(client: &PetChainContractClient, env: &Env, admin: &Address) -> Address {
+fn setup_vet(client: &CatChainContractClient, env: &Env, admin: &Address) -> Address {
     let vet = Address::generate(env);
     client.register_vet(
         &vet,
@@ -54,7 +54,7 @@ fn test_take_and_retrieve_snapshot() {
     let owner = Address::generate(&env);
 
     // Register some pets
-    let pet_id1 = register_pet_with_species(&client, &env, &owner, Species::Dog);
+    let pet_id1 = register_pet_with_species(&client, &env, &owner, Species::Cat);
     let pet_id2 = register_pet_with_species(&client, &env, &owner, Species::Cat);
 
     // Activate one pet
@@ -101,7 +101,7 @@ fn test_take_and_retrieve_snapshot() {
 
     // Verify species distribution
     assert_eq!(
-        snapshot.species_distribution.get(String::from_str(&env, "Dog")).unwrap(),
+        snapshot.species_distribution.get(String::from_str(&env, "Cat")).unwrap(),
         1
     );
     assert_eq!(
@@ -126,7 +126,7 @@ fn test_multiple_snapshots() {
     assert_eq!(snapshot_id1, 1);
 
     // Register a pet
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
 
     // Take second snapshot
     let snapshot_id2 = client.take_statistics_snapshot(&admin);
@@ -255,8 +255,8 @@ fn test_snapshot_purge_continues() {
 fn test_snapshot_requires_admin_auth() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     client.init_admin(&admin);
@@ -288,9 +288,9 @@ fn test_snapshot_species_distribution() {
     let owner = Address::generate(&env);
 
     // Register pets of different species
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
     register_pet_with_species(&client, &env, &owner, Species::Cat);
     register_pet_with_species(&client, &env, &owner, Species::Cat);
     register_pet_with_species(&client, &env, &owner, Species::Bird);
@@ -302,7 +302,7 @@ fn test_snapshot_species_distribution() {
 
     // Verify species distribution
     assert_eq!(
-        snapshot.species_distribution.get(String::from_str(&env, "Dog")).unwrap(),
+        snapshot.species_distribution.get(String::from_str(&env, "Cat")).unwrap(),
         3
     );
     assert_eq!(
@@ -348,7 +348,7 @@ fn test_snapshot_with_insurance_claims() {
     let owner = Address::generate(&env);
 
     // Register pet with insurance
-    let pet_id = register_pet_with_species(&client, &env, &owner, Species::Dog);
+    let pet_id = register_pet_with_species(&client, &env, &owner, Species::Cat);
 
     // Add insurance policy
     client.add_insurance_policy(
@@ -387,14 +387,14 @@ fn test_snapshot_point_in_time() {
     let owner = Address::generate(&env);
 
     // Register 2 pets
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
     register_pet_with_species(&client, &env, &owner, Species::Cat);
 
     // Take first snapshot
     let snapshot_id1 = client.take_statistics_snapshot(&admin);
 
     // Register 3 more pets
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
     register_pet_with_species(&client, &env, &owner, Species::Cat);
     register_pet_with_species(&client, &env, &owner, Species::Bird);
 
@@ -405,7 +405,7 @@ fn test_snapshot_point_in_time() {
     let snapshot1 = client.get_snapshot(&snapshot_id1).unwrap();
     assert_eq!(snapshot1.total_pets, 2);
     assert_eq!(
-        snapshot1.species_distribution.get(String::from_str(&env, "Dog")).unwrap(),
+        snapshot1.species_distribution.get(String::from_str(&env, "Cat")).unwrap(),
         1
     );
     assert_eq!(
@@ -417,7 +417,7 @@ fn test_snapshot_point_in_time() {
     let snapshot2 = client.get_snapshot(&snapshot_id2).unwrap();
     assert_eq!(snapshot2.total_pets, 5);
     assert_eq!(
-        snapshot2.species_distribution.get(String::from_str(&env, "Dog")).unwrap(),
+        snapshot2.species_distribution.get(String::from_str(&env, "Cat")).unwrap(),
         2
     );
     assert_eq!(

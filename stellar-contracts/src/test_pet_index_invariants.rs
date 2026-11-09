@@ -14,18 +14,18 @@
 
 #[cfg(test)]
 mod test_pet_index_invariants {
-    use crate::{Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+    use crate::{Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
     use soroban_sdk::{testutils::Address as _, Address, Env, String, Vec};
 
-    fn setup(env: &Env) -> (PetChainContractClient<'_>, Address) {
+    fn setup(env: &Env) -> (CatChainContractClient<'_>, Address) {
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(env, &contract_id);
         (client, contract_id)
     }
 
     fn register(
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         env: &Env,
         owner: &Address,
         species: Species,
@@ -51,10 +51,10 @@ mod test_pet_index_invariants {
     fn assert_owner_index_consistent(
         env: &Env,
         contract_id: &Address,
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         owner: &Address,
     ) {
-        let count = PetChainContract::get_owner_pet_count(env, owner);
+        let count = CatChainContract::get_owner_pet_count(env, owner);
         let mut seen: Vec<u64> = Vec::new(env);
         for i in 1..=count {
             let pet_id: u64 = env
@@ -90,13 +90,13 @@ mod test_pet_index_invariants {
         // and two species, exercising interleaved index growth rather than
         // one owner/species at a time.
         let sequence: [(usize, Species); 8] = [
-            (0, Species::Dog),
+            (0, Species::Cat),
             (1, Species::Cat),
             (0, Species::Cat),
-            (2, Species::Dog),
-            (1, Species::Dog),
             (2, Species::Cat),
-            (0, Species::Dog),
+            (1, Species::Cat),
+            (2, Species::Cat),
+            (0, Species::Cat),
             (1, Species::Cat),
         ];
         let owners = [owner_a.clone(), owner_b.clone(), owner_c.clone()];
@@ -115,9 +115,9 @@ mod test_pet_index_invariants {
         for owner in owners.iter() {
             assert_owner_index_consistent(&env, &contract_id, &client, owner);
         }
-        assert_eq!(PetChainContract::get_owner_pet_count(&env, &owner_a), 3);
-        assert_eq!(PetChainContract::get_owner_pet_count(&env, &owner_b), 3);
-        assert_eq!(PetChainContract::get_owner_pet_count(&env, &owner_c), 2);
+        assert_eq!(CatChainContract::get_owner_pet_count(&env, &owner_a), 3);
+        assert_eq!(CatChainContract::get_owner_pet_count(&env, &owner_b), 3);
+        assert_eq!(CatChainContract::get_owner_pet_count(&env, &owner_c), 2);
 
         // Now transfer owner_a's first two pets to owner_c and re-verify both
         // sides of the index (source shrinks and stays dense, destination
@@ -127,8 +127,8 @@ mod test_pet_index_invariants {
         moving.push_back(pet_ids_by_owner[0].get(1).unwrap());
         client.batch_transfer(&moving, &owner_c);
 
-        assert_eq!(PetChainContract::get_owner_pet_count(&env, &owner_a), 1);
-        assert_eq!(PetChainContract::get_owner_pet_count(&env, &owner_c), 4);
+        assert_eq!(CatChainContract::get_owner_pet_count(&env, &owner_a), 1);
+        assert_eq!(CatChainContract::get_owner_pet_count(&env, &owner_c), 4);
         assert_owner_index_consistent(&env, &contract_id, &client, &owner_a);
         assert_owner_index_consistent(&env, &contract_id, &client, &owner_c);
     }

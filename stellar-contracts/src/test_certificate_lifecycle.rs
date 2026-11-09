@@ -6,14 +6,14 @@ use soroban_sdk::{
 
 const NOW: u64 = 1_700_000_000;
 
-fn setup() -> (Env, PetChainContractClient<'static>, Address, Address, Address, u64, u64) {
+fn setup() -> (Env, CatChainContractClient<'static>, Address, Address, Address, u64, u64) {
     let env = Env::default();
     env.mock_all_auths();
     env.budget().reset_unlimited();
     env.ledger().set_timestamp(NOW);
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     let owner = Address::generate(&env);
@@ -25,7 +25,7 @@ fn setup() -> (Env, PetChainContractClient<'static>, Address, Address, Address, 
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Brown"),
         &25u32,

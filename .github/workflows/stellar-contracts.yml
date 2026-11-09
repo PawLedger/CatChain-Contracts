@@ -266,7 +266,7 @@ jobs:
         working-directory: stellar-contracts/contracts/pet-transfer-adoption
         run: |
           export PETCHAIN_MAIN_WASM=$(find "$GITHUB_WORKSPACE/target" "$GITHUB_WORKSPACE/stellar-contracts/target" \
-            -path '*wasm32-unknown-unknown/release/petchain_stellar.wasm' 2>/dev/null | head -n 1)
+            -path '*wasm32-unknown-unknown/release/catchain_stellar.wasm' 2>/dev/null | head -n 1)
           test -n "$PETCHAIN_MAIN_WASM" || { echo "main contract WASM not found" >&2; exit 1; }
           # soroban-env-host accepts any ed25519-dalek >= 2; keep it on the 2.x
           # line that soroban-sdk's testutils are built against.
@@ -350,10 +350,10 @@ jobs:
       fail-fast: false
       matrix:
         crate:
-          - petchain-contract
-          - petchain-registry
-          - petchain-consent
-          - petchain-claims
+          - catchain-contract
+          - catchain-registry
+          - catchain-consent
+          - catchain-claims
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

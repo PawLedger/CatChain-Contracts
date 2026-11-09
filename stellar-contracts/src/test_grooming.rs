@@ -8,16 +8,16 @@ mod test_grooming {
         env.mock_all_auths();
         env.budget().reset_unlimited();
 
-        let contract_id = env.register_contract(None, PetChainContract);
+        let contract_id = env.register_contract(None, CatChainContract);
 
         let owner = Address::generate(&env);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let pet_id = client.register_pet(
             &owner,
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Retriever"),
             &PrivacyLevel::Public,
         );
@@ -40,7 +40,7 @@ mod test_grooming {
     #[should_panic(expected = "Record photo limit exceeded")]
     fn test_per_record_photo_limit_rejected() {
         let (env, contract_id, owner, pet_id) = setup();
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let record_id = client.add_grooming_record(
             &pet_id,
             &owner,
@@ -57,7 +57,7 @@ mod test_grooming {
     #[test]
     fn test_remove_decrements_count_correctly() {
         let (env, contract_id, owner, pet_id) = setup();
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let record_id =
             client.add_grooming_record(&pet_id, &owner, &String::from_str(&env, "Nail trim"));
 
@@ -82,7 +82,7 @@ mod test_grooming {
     #[should_panic(expected = "Invalid CID")]
     fn test_invalid_cid_rejected() {
         let (env, contract_id, owner, pet_id) = setup();
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let record_id =
             client.add_grooming_record(&pet_id, &owner, &String::from_str(&env, "Bath"));
 
@@ -93,7 +93,7 @@ mod test_grooming {
     #[should_panic(expected = "Pet photo limit exceeded")]
     fn test_per_pet_photo_limit_rejected() {
         let (env, contract_id, owner, pet_id) = setup();
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         for _ in 0..10 {
             let record_id = client.add_grooming_record(
@@ -114,7 +114,7 @@ mod test_grooming {
         client.add_grooming_photo(&extra_record, &String::from_str(&env, "bafyoverflow"));
     }
 
-use crate::{Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+use crate::{Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
 #[test]
@@ -122,8 +122,8 @@ fn test_add_grooming_record() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let admin = Address::generate(&env);
@@ -135,7 +135,7 @@ fn test_add_grooming_record() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -161,8 +161,8 @@ fn test_get_grooming_history() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let admin = Address::generate(&env);
@@ -174,7 +174,7 @@ fn test_get_grooming_history() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -211,8 +211,8 @@ fn test_get_next_grooming_date() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let admin = Address::generate(&env);
@@ -224,7 +224,7 @@ fn test_get_next_grooming_date() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -251,8 +251,8 @@ fn test_get_grooming_expenses() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let admin = Address::generate(&env);
@@ -264,7 +264,7 @@ fn test_get_grooming_expenses() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -302,8 +302,8 @@ fn test_add_grooming_record_invalid_pet() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     client.init_admin(&admin);
@@ -324,8 +324,8 @@ fn test_empty_grooming_history() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let admin = Address::generate(&env);
@@ -337,7 +337,7 @@ fn test_empty_grooming_history() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -360,8 +360,8 @@ fn test_get_grooming_record() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let admin = Address::generate(&env);
@@ -373,7 +373,7 @@ fn test_get_grooming_record() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -403,8 +403,8 @@ fn test_get_grooming_record_nonexistent() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let result = client.get_grooming_record(&999u64);
     assert!(result.is_none());
@@ -415,8 +415,8 @@ fn test_get_grooming_count_zero() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let admin = Address::generate(&env);
@@ -428,7 +428,7 @@ fn test_get_grooming_count_zero() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -446,8 +446,8 @@ fn test_get_grooming_count_after_adding_records() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let admin = Address::generate(&env);
@@ -459,7 +459,7 @@ fn test_get_grooming_count_after_adding_records() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -497,8 +497,8 @@ fn test_get_grooming_count_matches_history_length() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let admin = Address::generate(&env);
@@ -510,7 +510,7 @@ fn test_get_grooming_count_matches_history_length() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2021-06-15"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &25,
@@ -539,10 +539,10 @@ fn test_get_grooming_count_matches_history_length() {
 }
 
 mod test_recurring_grooming {
-    use crate::{Gender, GroomingFrequency, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+    use crate::{Gender, GroomingFrequency, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
     use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-    fn setup_pet(env: &Env, client: &PetChainContractClient) -> (Address, u64) {
+    fn setup_pet(env: &Env, client: &CatChainContractClient) -> (Address, u64) {
         let owner = Address::generate(env);
         let admin = Address::generate(env);
         client.init_admin(&admin);
@@ -551,7 +551,7 @@ mod test_recurring_grooming {
             &String::from_str(env, "Buddy"),
             &String::from_str(env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(env, "Golden Retriever"),
             &String::from_str(env, "Golden"),
             &30,
@@ -565,8 +565,8 @@ mod test_recurring_grooming {
     fn test_create_grooming_schedule_generates_4_slots() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let (_owner, pet_id) = setup_pet(&env, &client);
 
         let start = 1_000_000u64;
@@ -591,8 +591,8 @@ mod test_recurring_grooming {
     fn test_advance_schedule_correct_date() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let (_owner, pet_id) = setup_pet(&env, &client);
 
         let start = 1_000_000u64;
@@ -622,8 +622,8 @@ mod test_recurring_grooming {
     fn test_cancel_schedule_stops_generation() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let (_owner, pet_id) = setup_pet(&env, &client);
 
         let start = 1_000_000u64;
@@ -655,7 +655,7 @@ mod test_grooming_conflict {
     use crate::*;
     use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-    fn setup_groomer(env: &Env, client: &PetChainContractClient) -> Address {
+    fn setup_groomer(env: &Env, client: &CatChainContractClient) -> Address {
         let admin = Address::generate(env);
         client.init_admin(&admin);
         let groomer = Address::generate(env);
@@ -673,8 +673,8 @@ mod test_grooming_conflict {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let groomer = setup_groomer(&env, &client);
 
         let owner = Address::generate(&env);
@@ -683,7 +683,7 @@ mod test_grooming_conflict {
             &String::from_str(&env, "Max"),
             &String::from_str(&env, "2019-06-15"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Beagle"),
             &PrivacyLevel::Public,
         );
@@ -705,8 +705,8 @@ mod test_grooming_conflict {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let groomer = setup_groomer(&env, &client);
 
         let owner = Address::generate(&env);
@@ -715,7 +715,7 @@ mod test_grooming_conflict {
             &String::from_str(&env, "Bella"),
             &String::from_str(&env, "2018-03-10"),
             &Gender::Female,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Poodle"),
             &PrivacyLevel::Public,
         );
@@ -733,8 +733,8 @@ mod test_grooming_conflict {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let groomer = setup_groomer(&env, &client);
 
         let owner = Address::generate(&env);
@@ -743,7 +743,7 @@ mod test_grooming_conflict {
             &String::from_str(&env, "Charlie"),
             &String::from_str(&env, "2020-11-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &PrivacyLevel::Public,
         );
@@ -761,8 +761,8 @@ mod test_grooming_conflict {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let admin = Address::generate(&env);
         let owner = Address::generate(&env);
@@ -774,7 +774,7 @@ mod test_grooming_conflict {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Retriever"),
             &PrivacyLevel::Public,
         );

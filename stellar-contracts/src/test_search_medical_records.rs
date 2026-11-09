@@ -6,7 +6,7 @@
 mod test_search_medical_records {
     extern crate std;
     use crate::{
-        Gender, MedicalRecordFilter, PetChainContract, PetChainContractClient, PrivacyLevel,
+        Gender, MedicalRecordFilter, CatChainContract, CatChainContractClient, PrivacyLevel,
         Species,
     };
     use soroban_sdk::{
@@ -16,7 +16,7 @@ mod test_search_medical_records {
 
     fn setup() -> (
         Env,
-        PetChainContractClient<'static>,
+        CatChainContractClient<'static>,
         Address,
         Address,
         Address,
@@ -26,8 +26,8 @@ mod test_search_medical_records {
         env.mock_all_auths();
 
         let admin = Address::generate(&env);
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         client.init_admin(&admin);
 
         let owner = Address::generate(&env);
@@ -37,7 +37,7 @@ mod test_search_medical_records {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &String::from_str(&env, "Brown"),
             &25u32,
@@ -57,7 +57,7 @@ mod test_search_medical_records {
     }
 
     fn add_record(
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         env: &Env,
         pet_id: u64,
         vet: &Address,
@@ -74,7 +74,7 @@ mod test_search_medical_records {
     }
 
     fn add_record_at(
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         env: &Env,
         pet_id: u64,
         vet: &Address,

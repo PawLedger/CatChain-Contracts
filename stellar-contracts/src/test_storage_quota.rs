@@ -1,11 +1,11 @@
 use crate::*;
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-fn setup_env() -> (Env, PetChainContractClient<'static>, Address, Address) {
+fn setup_env() -> (Env, CatChainContractClient<'static>, Address, Address) {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     let owner = Address::generate(&env);
@@ -15,7 +15,7 @@ fn setup_env() -> (Env, PetChainContractClient<'static>, Address, Address) {
 }
 
 fn register_test_pet(
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     env: &Env,
     owner: &Address,
 ) -> u64 {
@@ -24,7 +24,7 @@ fn register_test_pet(
         &String::from_str(env, "TestPet"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "TestBreed"),
         &String::from_str(env, "Brown"),
         &25u32,
@@ -34,7 +34,7 @@ fn register_test_pet(
 }
 
 fn register_vet(
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     env: &Env,
     admin: &Address,
 ) -> Address {

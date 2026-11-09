@@ -1,4 +1,4 @@
-name: PetChain Stellar Contracts
+name: CatChain Stellar Contracts
 
 on:
   workflow_dispatch:

@@ -1,18 +1,18 @@
 use crate::*;
 use soroban_sdk::{testutils::Address as _, Env, String};
 
-fn setup() -> (Env, PetChainContractClient<'static>, u64, Address) {
+fn setup() -> (Env, CatChainContractClient<'static>, u64, Address) {
     let env = Env::default();
     env.mock_all_auths();
-    let id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &id);
+    let id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &id);
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
         &owner,
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "1000000"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &20u32,
@@ -22,7 +22,7 @@ fn setup() -> (Env, PetChainContractClient<'static>, u64, Address) {
     (env, client, pet_id, owner)
 }
 
-fn put(env: &Env, client: &PetChainContractClient, pet_id: u64, owner: &Address, idx: u64, active: bool) {
+fn put(env: &Env, client: &CatChainContractClient, pet_id: u64, owner: &Address, idx: u64, active: bool) {
     env.as_contract(&client.address, || {
         env.storage().instance().set(
             &ConsentKey::Consent(idx),
@@ -50,7 +50,7 @@ fn put(env: &Env, client: &PetChainContractClient, pet_id: u64, owner: &Address,
     });
 }
 
-fn live_ids(env: &Env, client: &PetChainContractClient, pet_id: u64) -> u64 {
+fn live_ids(env: &Env, client: &CatChainContractClient, pet_id: u64) -> u64 {
     env.as_contract(&client.address, || {
         env.storage()
             .instance()

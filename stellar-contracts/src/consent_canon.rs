@@ -24,7 +24,7 @@ use soroban_sdk::{contracttype, Address, Bytes, BytesN, Env, Vec};
 use crate::{ConsentScope, ConsentType};
 
 /// Domain tag for [`canonical_consent_hash`].
-pub const CONSENT_HASH_DOMAIN: &[u8] = b"petchain:consent:v1";
+pub const CONSENT_HASH_DOMAIN: &[u8] = b"catchain:consent:v1";
 
 /// Upper bound on the raw (pre-normalisation) scope list length.
 pub const MAX_CONSENT_SCOPE_INPUT: u32 = 16;

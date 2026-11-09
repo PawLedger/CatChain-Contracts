@@ -32,8 +32,8 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        ActivityType, ContractError, Gender, Ingredient, PetChainContract,
-        PetChainContractClient, PrivacyLevel, Species, MAX_CUSTODY_CHAIN,
+        ActivityType, ContractError, Gender, Ingredient, CatChainContract,
+        CatChainContractClient, PrivacyLevel, Species, MAX_CUSTODY_CHAIN,
         MAX_INGREDIENTS, MAX_MILESTONES, MAX_MULTISIG_SIGNERS, MAX_PREREQUISITES,
         MAX_TRANSFER_SIGNATURES,
     };
@@ -41,7 +41,7 @@ mod tests {
 
     // ─── helpers ──────────────────────────────────────────────────────────────
 
-    fn setup() -> (Env, PetChainContractClient<'static>, Address, Address) {
+    fn setup() -> (Env, CatChainContractClient<'static>, Address, Address) {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
@@ -50,8 +50,8 @@ mod tests {
             li.timestamp = 1_700_000_000;
         });
 
-        let contract_id = env.register(PetChainContract, ());
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register(CatChainContract, ());
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let admin = Address::generate(&env);
         let mut admins = soroban_sdk::Vec::new(&env);
@@ -62,13 +62,13 @@ mod tests {
         (env, client, admin, owner)
     }
 
-    fn register_pet(client: &PetChainContractClient, env: &Env, owner: &Address) -> u64 {
+    fn register_pet(client: &CatChainContractClient, env: &Env, owner: &Address) -> u64 {
         client.register_pet(
             owner,
             &String::from_str(env, "TestPet"),
             &String::from_str(env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(env, "Labrador"),
             &String::from_str(env, "Yellow"),
             &25u32,
@@ -77,7 +77,7 @@ mod tests {
         )
     }
 
-    fn setup_vet(client: &PetChainContractClient, env: &Env, admin: &Address, lic: &str) -> Address {
+    fn setup_vet(client: &CatChainContractClient, env: &Env, admin: &Address, lic: &str) -> Address {
         let vet = Address::generate(env);
         client.register_vet(
             &vet,

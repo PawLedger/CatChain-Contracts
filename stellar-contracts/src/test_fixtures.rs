@@ -20,7 +20,7 @@
 //! and sequence number (1_000) so that ledger-timestamp-dependent calculations
 //! (age, expiry, TTL) produce the same result across every test run.
 
-use crate::{Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+use crate::{Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
 use soroban_sdk::{
     testutils::{Address as _, Ledger, LedgerInfo},
     Address, Env, String, Vec,
@@ -40,19 +40,19 @@ pub const BASE_SEQUENCE: u32 = 1_000;
 
 // ─── TestEnv ──────────────────────────────────────────────────────────────────
 
-/// A fully initialised PetChain test environment with a two-of-two multisig
+/// A fully initialised CatChain test environment with a two-of-two multisig
 /// admin and a pre-registered owner address.
 ///
 /// Create with [`TestEnv::new()`]. Fields are public so individual tests can
 /// reach in without extra boilerplate.
 pub struct TestEnv<'a> {
     pub env: Env,
-    pub client: PetChainContractClient<'a>,
+    pub client: CatChainContractClient<'a>,
     /// First multisig admin (also used as the default proposer in governance tests).
     pub admin1: Address,
     /// Second multisig admin (provides the second approval to reach quorum).
     pub admin2: Address,
-    /// Pre-registered pet owner.
+    /// Pre-registered cat owner.
     pub owner: Address,
 }
 
@@ -76,8 +76,8 @@ impl<'a> TestEnv<'a> {
             max_entry_ttl: 9_999_999,
         });
 
-        let contract_id = env.register(PetChainContract, ());
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register(CatChainContract, ());
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let admin1 = Address::generate(&env);
         let admin2 = Address::generate(&env);
@@ -119,14 +119,14 @@ impl<'a> TestEnv<'a> {
 /// | name     | "TestPet"            |
 /// | birthday | "2020-01-01"         |
 /// | gender   | Male                 |
-/// | species  | Dog                  |
+/// | species  | Cat                  |
 /// | breed    | "Labrador"           |
 /// | color    | "Yellow"             |
 /// | weight   | 25                   |
 /// | privacy  | Public               |
 pub fn create_test_pet(
     env: &Env,
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     owner: &Address,
 ) -> u64 {
     client.register_pet(
@@ -134,7 +134,7 @@ pub fn create_test_pet(
         &String::from_str(env, "TestPet"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Yellow"),
         &25u32,
@@ -147,7 +147,7 @@ pub fn create_test_pet(
 /// defaults as [`create_test_pet`]).
 pub fn create_named_pet(
     env: &Env,
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     owner: &Address,
     name: &str,
 ) -> u64 {
@@ -156,7 +156,7 @@ pub fn create_named_pet(
         &String::from_str(env, name),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Yellow"),
         &25u32,
@@ -177,7 +177,7 @@ pub fn create_named_pet(
 /// | name           | "Dr. TestVet"      |
 /// | license_number | "VET-TEST-001"     |
 /// | specialization | "General Practice" |
-pub fn create_test_vet(env: &Env, client: &PetChainContractClient) -> Address {
+pub fn create_test_vet(env: &Env, client: &CatChainContractClient) -> Address {
     let vet_address = Address::generate(env);
     client.register_vet(
         &vet_address,
@@ -192,7 +192,7 @@ pub fn create_test_vet(env: &Env, client: &PetChainContractClient) -> Address {
 /// collisions when multiple vets are needed in one test.
 pub fn create_vet_with_license(
     env: &Env,
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     license: &str,
 ) -> Address {
     let vet_address = Address::generate(env);
@@ -210,10 +210,10 @@ pub fn create_vet_with_license(
 /// Return a `(admin1, admin2, client)` triple backed by a fresh multisig
 /// environment, mirroring the legacy `setup()` pattern used in several test
 /// files. Prefer `TestEnv::new()` for new tests.
-pub fn create_test_admin(env: &Env) -> (Address, Address, PetChainContractClient) {
+pub fn create_test_admin(env: &Env) -> (Address, Address, CatChainContractClient) {
     env.mock_all_auths();
-    let contract_id = env.register(PetChainContract, ());
-    let client = PetChainContractClient::new(env, &contract_id);
+    let contract_id = env.register(CatChainContract, ());
+    let client = CatChainContractClient::new(env, &contract_id);
 
     let admin1 = Address::generate(env);
     let admin2 = Address::generate(env);

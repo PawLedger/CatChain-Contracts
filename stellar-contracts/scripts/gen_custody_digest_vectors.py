@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Reference implementation for the PetChain custody-chain canonical digest.
+Reference implementation for the CatChain custody-chain canonical digest.
 
 This script reproduces, byte-for-byte, the canonical serialisation used by
-`PetChainContract::get_custody_chain_digest` (see stellar-contracts/src/lib.rs)
+`CatChainContract::get_custody_chain_digest` (see stellar-contracts/src/lib.rs)
 and prints the published vectors asserted in
 stellar-contracts/src/test_custody_digest.rs.
 
-Canonical format (CUSTODY_DIGEST_DOMAIN = "petchain.custody", version = 1)
+Canonical format (CUSTODY_DIGEST_DOMAIN = "catchain.custody", version = 1)
 --------------------------------------------------------------------------
 Each CustodyEntry is canonicalised as:
 
@@ -72,7 +72,7 @@ def account_strkey(i: int) -> str:
 # Canonical serialisation
 # ---------------------------------------------------------------------------
 
-DOMAIN = b"petchain.custody"
+DOMAIN = b"catchain.custody"
 VERSION = 1
 
 SCV_ADDRESS = 18

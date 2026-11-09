@@ -1,6 +1,6 @@
 // Breeding eligibility, cooldown boundary and replay tests (Issue #1342).
 use crate::{
-    BreedingCheck, BreedingPolicy, ContractError, Gender, PetChainContract, PetChainContractClient,
+    BreedingCheck, BreedingPolicy, ContractError, Gender, CatChainContract, CatChainContractClient,
     PrivacyLevel, Species, DEFAULT_DAM_COOLDOWN_SECS, DEFAULT_MAX_COI_BP,
     DEFAULT_MIN_BREEDING_AGE_SECS, DEFAULT_SIRE_COOLDOWN_SECS,
 };
@@ -19,7 +19,7 @@ const ADULT: u64 = BIRTH + MIN_AGE;
 
 struct Ctx<'a> {
     env: Env,
-    client: PetChainContractClient<'a>,
+    client: CatChainContractClient<'a>,
     contract_id: Address,
     admin: Address,
     owner: Address,
@@ -30,8 +30,8 @@ fn setup<'a>() -> Ctx<'a> {
     env.mock_all_auths();
     env.budget().reset_unlimited();
     env.ledger().with_mut(|l| l.timestamp = NOW);
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
     let owner = Address::generate(&env);
     client.init_admin(&admin);
@@ -85,11 +85,11 @@ fn pet(c: &Ctx, owner: &Address, gender: Gender, species: Species, birth: u64) -
 }
 
 fn sire(c: &Ctx) -> u64 {
-    pet(c, &c.owner, Gender::Male, Species::Dog, BIRTH)
+    pet(c, &c.owner, Gender::Male, Species::Cat, BIRTH)
 }
 
 fn dam(c: &Ctx) -> u64 {
-    pet(c, &c.owner, Gender::Female, Species::Dog, BIRTH)
+    pet(c, &c.owner, Gender::Female, Species::Cat, BIRTH)
 }
 
 fn notes(env: &Env) -> String {
@@ -133,7 +133,7 @@ fn eligible_mating_records_parent_and_cooldown_relationship() {
 #[test]
 fn default_policy_applies_when_unset() {
     let env = Env::default();
-    let client = PetChainContractClient::new(&env, &env.register_contract(None, PetChainContract));
+    let client = CatChainContractClient::new(&env, &env.register_contract(None, CatChainContract));
     let p = client.get_breeding_policy();
     assert_eq!(p.min_age_secs, DEFAULT_MIN_BREEDING_AGE_SECS);
     assert_eq!(p.sire_cooldown_secs, DEFAULT_SIRE_COOLDOWN_SECS);
@@ -181,9 +181,9 @@ fn inactive_or_archived_parents_are_rejected() {
 fn incompatible_sex_or_species_is_rejected() {
     let c = setup();
     let (s, d) = (sire(&c), dam(&c));
-    let male2 = pet(&c, &c.owner, Gender::Male, Species::Dog, BIRTH);
+    let male2 = pet(&c, &c.owner, Gender::Male, Species::Cat, BIRTH);
     let cat = pet(&c, &c.owner, Gender::Female, Species::Cat, BIRTH);
-    let unknown = pet(&c, &c.owner, Gender::Unknown, Species::Dog, BIRTH);
+    let unknown = pet(&c, &c.owner, Gender::Unknown, Species::Cat, BIRTH);
 
     assert_eq!(
         c.client.check_breeding_eligibility(&s, &cat, &ADULT),
@@ -229,7 +229,7 @@ fn unauthorized_caller_is_rejected() {
 fn other_parents_owner_must_co_sign() {
     let c = setup();
     let stud_owner = Address::generate(&c.env);
-    let s = pet(&c, &stud_owner, Gender::Male, Species::Dog, BIRTH);
+    let s = pet(&c, &stud_owner, Gender::Male, Species::Cat, BIRTH);
     let d = dam(&c);
     let n = notes(&c.env);
     let invoke = MockAuthInvoke {
@@ -282,7 +282,7 @@ fn minimum_age_is_enforced_at_exact_boundary() {
 fn younger_parent_governs_age_check() {
     let c = setup();
     let s = sire(&c);
-    let young_dam = pet(&c, &c.owner, Gender::Female, Species::Dog, BIRTH + 50);
+    let young_dam = pet(&c, &c.owner, Gender::Female, Species::Cat, BIRTH + 50);
     assert_eq!(
         c.client
             .check_breeding_eligibility(&s, &young_dam, &(ADULT + 49)),

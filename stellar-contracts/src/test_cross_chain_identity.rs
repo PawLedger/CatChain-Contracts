@@ -3,13 +3,13 @@ mod test_cross_chain_identity {
     use crate::*;
     use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-    fn setup() -> (Env, PetChainContractClient<'static>, u64, Address) {
+    fn setup() -> (Env, CatChainContractClient<'static>, u64, Address) {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let pet_id = client.register_pet(
@@ -17,7 +17,7 @@ mod test_cross_chain_identity {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &String::from_str(&env, "Black"),
             &20u32,

@@ -4,19 +4,19 @@
 
 #[cfg(test)]
 mod test_get_lab_results {
-    use crate::{Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+    use crate::{Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
     use soroban_sdk::{
         testutils::{Address as _, Ledger as _},
         Address, Env, Map, String, Vec,
     };
 
-    fn setup() -> (Env, PetChainContractClient<'static>, Address, Address, u64) {
+    fn setup() -> (Env, CatChainContractClient<'static>, Address, Address, u64) {
         let env = Env::default();
         env.mock_all_auths();
 
         let admin = Address::generate(&env);
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         client.init_admin(&admin);
 
         let owner = Address::generate(&env);
@@ -26,7 +26,7 @@ mod test_get_lab_results {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &String::from_str(&env, "Brown"),
             &25u32,
@@ -46,7 +46,7 @@ mod test_get_lab_results {
     }
 
     fn add_lab_result(
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         env: &Env,
         pet_id: u64,
         vet: &Address,
@@ -231,7 +231,7 @@ mod test_get_lab_results {
     // REFERENCE RANGE VALIDATION TESTS (Issue #652)
     // ============================================================
 
-    fn setup_with_admin() -> (Env, PetChainContractClient<'static>, Address, Address, u64, Address) {
+    fn setup_with_admin() -> (Env, CatChainContractClient<'static>, Address, Address, u64, Address) {
         let (env, client, owner, vet, pet_id) = setup();
         let admin = Address::generate(&env);
         (env, client, owner, vet, pet_id, admin)
@@ -243,14 +243,14 @@ mod test_get_lab_results {
 
         client.set_reference_range(
             &admin,
-            &String::from_str(&env, "Dog"),
+            &String::from_str(&env, "Cat"),
             &String::from_str(&env, "WBC"),
             &5i128,
             &15i128,
         );
 
         let range = client.get_reference_range(
-            &String::from_str(&env, "Dog"),
+            &String::from_str(&env, "Cat"),
             &String::from_str(&env, "WBC"),
         );
         assert!(range.is_some());
@@ -265,7 +265,7 @@ mod test_get_lab_results {
 
         let result = client.try_set_reference_range(
             &admin,
-            &String::from_str(&env, "Dog"),
+            &String::from_str(&env, "Cat"),
             &String::from_str(&env, "WBC"),
             &100i128,
             &1i128,

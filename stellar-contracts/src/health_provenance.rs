@@ -16,7 +16,7 @@
 //!
 //! ```text
 //! sha256(
-//!     b"petchain:health-score-input:v1"
+//!     b"catchain:health-score-input:v1"
 //!  || pet_id            u64
 //!  || as_of             u64
 //!  || vaccination       u32
@@ -32,7 +32,7 @@
 
 use soroban_sdk::{contracttype, Address, Bytes, BytesN, Env, Vec};
 
-pub const HEALTH_SCORE_INPUT_DOMAIN: &[u8] = b"petchain:health-score-input:v1";
+pub const HEALTH_SCORE_INPUT_DOMAIN: &[u8] = b"catchain:health-score-input:v1";
 pub const MAX_HEALTH_SCORE_SOURCES: u32 = 64;
 pub const MAX_HEALTH_COMPONENT_SCORE: u32 = 100;
 /// Algorithm versions this contract can evaluate. See `score_for_version`.

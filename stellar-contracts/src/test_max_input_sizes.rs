@@ -34,8 +34,8 @@
 // ============================================================
 
 use crate::{
-    ActivityType, BehaviorType, Gender, Ingredient, Medication, PetChainContract,
-    PetChainContractClient, PrivacyLevel, Species,
+    ActivityType, BehaviorType, Gender, Ingredient, Medication, CatChainContract,
+    CatChainContractClient, PrivacyLevel, Species,
     MAX_BEHAVIOR_DESC_LEN, MAX_INGREDIENTS, MAX_LAB_REF_RANGES_LEN,
     MAX_LAB_RESULTS_LEN, MAX_LAB_TEST_TYPE_LEN, MAX_MEDICAL_DIAGNOSIS_LEN,
     MAX_MEDICAL_NOTES_LEN, MAX_MEDICAL_TREATMENT_LEN, MAX_MULTISIG_SIGNERS,
@@ -61,13 +61,13 @@ fn str_of_len(env: &Env, n: u32) -> String {
 }
 
 /// Register a pet for the owner.
-fn register_pet(client: &PetChainContractClient, env: &Env, owner: &Address, name: &str) -> u64 {
+fn register_pet(client: &CatChainContractClient, env: &Env, owner: &Address, name: &str) -> u64 {
     client.register_pet(
         owner,
         &String::from_str(env, name),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Brown"),
         &25u32,
@@ -78,12 +78,12 @@ fn register_pet(client: &PetChainContractClient, env: &Env, owner: &Address, nam
 
 /// Shared harness: init admin, register a pet, register + verify a
 /// vet. Returns (client, admin, owner, vet, pet_id).
-fn setup() -> (Env, PetChainContractClient<'static>, Address, Address, Address, u64) {
+fn setup() -> (Env, CatChainContractClient<'static>, Address, Address, Address, u64) {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     client.init_admin(&admin);
@@ -103,11 +103,11 @@ fn setup() -> (Env, PetChainContractClient<'static>, Address, Address, Address, 
 }
 
 /// Same, but no verified vet (for register_vet-only tests).
-fn setup_admin() -> (Env, PetChainContractClient<'static>, Address) {
+fn setup_admin() -> (Env, CatChainContractClient<'static>, Address) {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
     client.init_admin(&admin);
     (env, client, admin)
@@ -129,7 +129,7 @@ fn register_pet_color_at_limit_accepted() {
         &String::from_str(&env, "ColorPet"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &str_of_len(&env, MAX_COLOR_LEN),
         &25u32,
@@ -149,7 +149,7 @@ fn register_pet_color_over_limit_rejected() {
         &String::from_str(&env, "ColorPet"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &str_of_len(&env, MAX_COLOR_LEN + 1),
         &25u32,
@@ -219,7 +219,7 @@ fn activity_notes_over_limit_rejected() {
 // add_medical_record : diagnosis / treatment / notes
 
 fn add_medical_record(
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     env: &Env,
     pet_id: u64,
     vet: &Address,
@@ -300,7 +300,7 @@ fn medical_notes_over_limit_rejected() {
 // add_lab_result : test_type / results / reference_ranges
 
 fn add_lab(
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     env: &Env,
     pet_id: u64,
     vet: &Address,
@@ -384,7 +384,7 @@ fn lab_reference_ranges_over_limit_rejected() {
 
 /// Register a pet with an explicit gender (breeding needs a sire + dam).
 fn register_pet_gender(
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     env: &Env,
     owner: &Address,
     name: &str,
@@ -395,7 +395,7 @@ fn register_pet_gender(
         &String::from_str(env, name),
         &String::from_str(env, "2020-01-01"),
         &gender,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Brown"),
         &25u32,
@@ -439,7 +439,7 @@ fn breeding_notes_over_limit_rejected() {
 #[test]
 fn vet_specialization_at_limit_accepted() {
     let (env, client, _admin) = setup_admin();
-    let max = PetChainContract::MAX_VET_SPEC_LEN;
+    let max = CatChainContract::MAX_VET_SPEC_LEN;
     let vet = Address::generate(&env);
     let ok = client.register_vet(
         &vet,
@@ -454,7 +454,7 @@ fn vet_specialization_at_limit_accepted() {
 #[should_panic(expected = "Error(Contract, #12)")]
 fn vet_specialization_over_limit_rejected() {
     let (env, client, _admin) = setup_admin();
-    let max = PetChainContract::MAX_VET_SPEC_LEN;
+    let max = CatChainContract::MAX_VET_SPEC_LEN;
     let vet = Address::generate(&env);
     client.register_vet(
         &vet,

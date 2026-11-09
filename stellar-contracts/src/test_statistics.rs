@@ -1,11 +1,11 @@
 use crate::*;
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-fn setup_env() -> (Env, PetChainContractClient<'static>, Address) {
+fn setup_env() -> (Env, CatChainContractClient<'static>, Address) {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     // Initialize admin
     let admin = Address::generate(&env);
@@ -15,7 +15,7 @@ fn setup_env() -> (Env, PetChainContractClient<'static>, Address) {
 }
 
 fn register_pet_with_species(
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     env: &Env,
     owner: &Address,
     species: Species,
@@ -41,7 +41,7 @@ fn test_get_total_pets() {
 
     assert_eq!(client.get_total_pets(), 0);
 
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
     assert_eq!(client.get_total_pets(), 1);
 
     register_pet_with_species(&client, &env, &owner, Species::Cat);
@@ -53,11 +53,11 @@ fn test_get_species_count() {
     let (env, client, _admin) = setup_env();
     let owner = Address::generate(&env);
 
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
     register_pet_with_species(&client, &env, &owner, Species::Cat);
 
-    assert_eq!(client.get_species_count(&String::from_str(&env, "Dog")), 2);
+    assert_eq!(client.get_species_count(&String::from_str(&env, "Cat")), 2);
     assert_eq!(client.get_species_count(&String::from_str(&env, "Cat")), 1);
     assert_eq!(client.get_species_count(&String::from_str(&env, "Bird")), 0);
 }
@@ -67,17 +67,17 @@ fn test_get_pets_by_species_pagination() {
     let (env, client, _admin) = setup_env();
     let owner = Address::generate(&env);
 
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
 
-    let dogs_all = client.get_pets_by_species(&String::from_str(&env, "Dog"), &0u64, &10u32);
+    let dogs_all = client.get_pets_by_species(&String::from_str(&env, "Cat"), &0u64, &10u32);
     assert_eq!(dogs_all.len(), 3);
 
-    let dogs_page = client.get_pets_by_species(&String::from_str(&env, "Dog"), &1u64, &1u32);
+    let dogs_page = client.get_pets_by_species(&String::from_str(&env, "Cat"), &1u64, &1u32);
     assert_eq!(dogs_page.len(), 1);
 
-    let dogs_empty = client.get_pets_by_species(&String::from_str(&env, "Dog"), &5u64, &1u32);
+    let dogs_empty = client.get_pets_by_species(&String::from_str(&env, "Cat"), &5u64, &1u32);
     assert_eq!(dogs_empty.len(), 0);
 }
 
@@ -86,7 +86,7 @@ fn test_get_active_pets_count() {
     let (env, client, _admin) = setup_env();
     let owner = Address::generate(&env);
 
-    let id1 = register_pet_with_species(&client, &env, &owner, Species::Dog);
+    let id1 = register_pet_with_species(&client, &env, &owner, Species::Cat);
     let id2 = register_pet_with_species(&client, &env, &owner, Species::Cat);
 
     assert_eq!(client.get_active_pets_count(), 0);
@@ -110,13 +110,13 @@ fn test_get_active_pets_count() {
 fn test_activate_pet_requires_owner_auth() {
     let env = Env::default();
     env.mock_all_auths(); // Mock auth for registration
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let _non_owner = Address::generate(&env);
 
-    let pet_id = register_pet_with_species(&client, &env, &owner, Species::Dog);
+    let pet_id = register_pet_with_species(&client, &env, &owner, Species::Cat);
 
     // Clear auth mocking so real auth checks apply
     env.set_auths(&[]);
@@ -153,7 +153,7 @@ fn test_vet_stats_update_after_vaccination() {
     client.verify_vet(&admin, &vet);
 
     // Register pet
-    let pet_id = register_pet_with_species(&client, &env, &owner, Species::Dog);
+    let pet_id = register_pet_with_species(&client, &env, &owner, Species::Cat);
 
     // Initial stats should be zero
     let initial_stats = client.get_vet_stats(&vet);
@@ -233,7 +233,7 @@ fn test_vet_stats_multiple_operations_same_pet() {
     client.verify_vet(&admin, &vet);
 
     // Register pet
-    let pet_id = register_pet_with_species(&client, &env, &owner, Species::Dog);
+    let pet_id = register_pet_with_species(&client, &env, &owner, Species::Cat);
 
     // Add vaccination
     client.add_vaccination(
@@ -281,7 +281,7 @@ fn test_vet_stats_multiple_pets() {
     client.verify_vet(&admin, &vet);
 
     // Register two pets
-    let pet_id1 = register_pet_with_species(&client, &env, &owner, Species::Dog);
+    let pet_id1 = register_pet_with_species(&client, &env, &owner, Species::Cat);
     let pet_id2 = register_pet_with_species(&client, &env, &owner, Species::Cat);
 
     // Add vaccination for first pet
@@ -317,7 +317,7 @@ fn test_vet_stats_multiple_pets() {
 // ── Vet Review Tests ──────────────────────────────────────────────────────────
 
 fn setup_vet_and_pet(
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     env: &Env,
     admin: &Address,
 ) -> (Address, Address, u64) {
@@ -334,7 +334,7 @@ fn setup_vet_and_pet(
     client.verify_vet(admin, &vet);
 
     // Register pet
-    let pet_id = register_pet_with_species(client, env, &owner, Species::Dog);
+    let pet_id = register_pet_with_species(client, env, &owner, Species::Cat);
 
     (owner, vet, pet_id)
 }
@@ -476,7 +476,7 @@ fn test_get_pet_count_by_owner_increments_on_register() {
     let (env, client, _admin) = setup_env();
     let owner = Address::generate(&env);
 
-    register_pet_with_species(&client, &env, &owner, Species::Dog);
+    register_pet_with_species(&client, &env, &owner, Species::Cat);
     assert_eq!(client.get_pet_count_by_owner(&owner), 1);
 
     register_pet_with_species(&client, &env, &owner, Species::Cat);
@@ -489,8 +489,8 @@ fn test_get_pet_count_by_owner_independent_per_owner() {
     let owner1 = Address::generate(&env);
     let owner2 = Address::generate(&env);
 
-    register_pet_with_species(&client, &env, &owner1, Species::Dog);
-    register_pet_with_species(&client, &env, &owner1, Species::Dog);
+    register_pet_with_species(&client, &env, &owner1, Species::Cat);
+    register_pet_with_species(&client, &env, &owner1, Species::Cat);
     register_pet_with_species(&client, &env, &owner2, Species::Cat);
 
     assert_eq!(client.get_pet_count_by_owner(&owner1), 2);

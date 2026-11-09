@@ -1,8 +1,8 @@
 // Health-score input provenance: score vectors, digest vectors, determinism,
 // version isolation and authorization (Issue #1343).
 use crate::{
-    ContractError, Gender, HealthInputKind, HealthInputRef, HealthScoreInputs, PetChainContract,
-    PetChainContractClient, PrivacyLevel, Species, VaccineType, HEALTH_SCORE_ALGORITHM_V1,
+    ContractError, Gender, HealthInputKind, HealthInputRef, HealthScoreInputs, CatChainContract,
+    CatChainContractClient, PrivacyLevel, Species, VaccineType, HEALTH_SCORE_ALGORITHM_V1,
     HEALTH_SCORE_ALGORITHM_V2, MAX_HEALTH_SCORE_SOURCES,
 };
 use soroban_sdk::{
@@ -16,7 +16,7 @@ const V2: u32 = HEALTH_SCORE_ALGORITHM_V2;
 
 struct Ctx<'a> {
     env: Env,
-    client: PetChainContractClient<'a>,
+    client: CatChainContractClient<'a>,
     admin: Address,
     owner: Address,
     vet: Address,
@@ -26,13 +26,13 @@ struct Ctx<'a> {
     lab_id: u64,
 }
 
-fn register_pet(env: &Env, client: &PetChainContractClient, owner: &Address) -> u64 {
+fn register_pet(env: &Env, client: &CatChainContractClient, owner: &Address) -> u64 {
     client.register_pet(
         owner,
         &String::from_str(env, "Milo"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Mix"),
         &String::from_str(env, "Brown"),
         &24u32,
@@ -43,7 +43,7 @@ fn register_pet(env: &Env, client: &PetChainContractClient, owner: &Address) -> 
 
 fn register_verified_vet(
     env: &Env,
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     admin: &Address,
     license: &str,
 ) -> Address {
@@ -60,7 +60,7 @@ fn register_verified_vet(
 
 fn add_medical_record(
     c_env: &Env,
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     pet_id: u64,
     vet: &Address,
 ) -> u64 {
@@ -79,8 +79,8 @@ fn setup<'a>() -> Ctx<'a> {
     env.mock_all_auths();
     env.budget().reset_unlimited();
     env.ledger().with_mut(|l| l.timestamp = NOW);
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
     let owner = Address::generate(&env);
     client.init_admin(&admin);

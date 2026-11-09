@@ -1,9 +1,9 @@
-use crate::{PetChainContract, PetChainContractClient};
+use crate::{CatChainContract, CatChainContractClient};
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-fn setup(env: &Env) -> (PetChainContractClient, Address) {
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+fn setup(env: &Env) -> (CatChainContractClient, Address) {
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
     let admin = Address::generate(env);
     client.init_admin(&admin);
     (client, admin)

@@ -27,7 +27,7 @@
 //! Wrap the scope (or individual routes) that must receive JSON:
 //!
 //! ```rust,ignore
-//! use petchain_2fa::ContentTypeGuard;
+//! use catchain_2fa::ContentTypeGuard;
 //!
 //! App::new()
 //!     .service(

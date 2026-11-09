@@ -1,21 +1,21 @@
 use crate::{
-    AccessLevel, ConsentScope, ConsentType, Gender, PetChainContract, PetChainContractClient,
+    AccessLevel, ConsentScope, ConsentType, Gender, CatChainContract, CatChainContractClient,
     PrivacyLevel, Species, VaccineType,
 };
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-fn setup() -> (Env, PetChainContractClient, Address) {
+fn setup() -> (Env, CatChainContractClient, Address) {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
     client.init_admin(&admin);
     (env, client, admin)
 }
 
 fn register_pet(
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     env: &Env,
     owner: &Address,
     privacy: PrivacyLevel,
@@ -25,7 +25,7 @@ fn register_pet(
         &String::from_str(env, "TestPet"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Brown"),
         &String::from_str(env, "Labrador"),
         &25,

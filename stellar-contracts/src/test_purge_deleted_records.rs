@@ -1,13 +1,13 @@
-use crate::{Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+use crate::{Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     Address, Env, String, Vec,
 };
 
-fn setup(env: &Env) -> (PetChainContractClient<'_>, Address, Address, u64) {
+fn setup(env: &Env) -> (CatChainContractClient<'_>, Address, Address, u64) {
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
 
     let admin = Address::generate(env);
     let vet = Address::generate(env);
@@ -27,7 +27,7 @@ fn setup(env: &Env) -> (PetChainContractClient<'_>, Address, Address, u64) {
         &String::from_str(env, "TestPet"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Brown"),
         &25,
@@ -39,7 +39,7 @@ fn setup(env: &Env) -> (PetChainContractClient<'_>, Address, Address, u64) {
 }
 
 fn add_record(
-    client: &PetChainContractClient<'_>,
+    client: &CatChainContractClient<'_>,
     env: &Env,
     vet: &Address,
     pet_id: u64,

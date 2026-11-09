@@ -29,19 +29,19 @@
 mod tests {
     use crate::{
         ActivityKey, BehaviorKey, BehaviorType, ContractError, DataKey, Gender, MedicalKey,
-        PetChainContract, PetChainContractClient, PrivacyLevel, Species, SystemKey,
+        CatChainContract, CatChainContractClient, PrivacyLevel, Species, SystemKey,
     };
     use soroban_sdk::{testutils::Address as _, Address, Env, Error, String};
 
     // ─── helpers ──────────────────────────────────────────────────────────────
 
-    fn setup() -> (Env, PetChainContractClient<'static>, Address, Address) {
+    fn setup() -> (Env, CatChainContractClient<'static>, Address, Address) {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
 
-        let contract_id = env.register(PetChainContract, ());
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register(CatChainContract, ());
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let admin = Address::generate(&env);
         let mut admins = soroban_sdk::Vec::new(&env);
@@ -52,13 +52,13 @@ mod tests {
         (env, client, admin, owner)
     }
 
-    fn register_pet(client: &PetChainContractClient, env: &Env, owner: &Address) -> u64 {
+    fn register_pet(client: &CatChainContractClient, env: &Env, owner: &Address) -> u64 {
         client.register_pet(
             owner,
             &String::from_str(env, "Buddy"),
             &String::from_str(env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(env, "Labrador"),
             &String::from_str(env, "Brown"),
             &25u32,
@@ -68,7 +68,7 @@ mod tests {
     }
 
     fn register_and_verify_vet(
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         env: &Env,
         admin: &Address,
         license: &str,
@@ -360,7 +360,7 @@ mod tests {
         // We can't easily trigger propose_action from outside, but we can
         // verify PetCount IDs are contiguous — same safe_increment is used.
         // (Proposal paths require multisig setup not exposed as a simple call.)
-        // Use pet registration as a proxy for the increment pattern.
+        // Use cat registration as a proxy for the increment pattern.
         let owner = Address::generate(&env);
         let id1 = register_pet(&client, &env, &owner);
         let id2 = register_pet(&client, &env, &owner);

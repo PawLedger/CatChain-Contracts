@@ -4,7 +4,7 @@ use soroban_sdk::Env;
 
 fn setup_pet_with_contact(
     env: &Env,
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
     owner: &Address,
 ) -> u64 {
     let pet_id = client.register_pet(
@@ -12,7 +12,7 @@ fn setup_pet_with_contact(
         &String::from_str(env, "Buddy"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Golden Retriever"),
         &String::from_str(env, "Golden"),
         &25u32,
@@ -44,8 +44,8 @@ fn setup_pet_with_contact(
 fn first_three_calls_succeed() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = setup_pet_with_contact(&env, &client, &owner);
@@ -60,8 +60,8 @@ fn first_three_calls_succeed() {
 fn fourth_call_within_the_hour_fails() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = setup_pet_with_contact(&env, &client, &owner);
@@ -82,8 +82,8 @@ fn fourth_call_within_the_hour_fails() {
 fn limit_resets_after_the_window_elapses() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = setup_pet_with_contact(&env, &client, &owner);
@@ -104,8 +104,8 @@ fn limit_resets_after_the_window_elapses() {
 fn rate_limit_is_scoped_per_caller_and_pet() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = setup_pet_with_contact(&env, &client, &owner);

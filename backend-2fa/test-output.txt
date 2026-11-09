@@ -1,4 +1,4 @@
-   Compiling petchain-2fa v0.1.0 (/workspaces/PetChain-Contracts/backend-2fa)
+   Compiling catchain-2fa v0.1.0 (/workspaces/CatChain-Contracts/backend-2fa)
 error: struct is not supported in `trait`s or `impl`s
    --> src/two_factor.rs:415:1
     |
@@ -256,7 +256,7 @@ note: required by a bound in `error::_::_serde::ser::SerializeStruct::serialize_
 1916 |     where
 1917 |         T: ?Sized + Serialize;
      |                     ^^^^^^^^^ required by this bound in `SerializeStruct::serialize_field`
-     = note: the full name for the type has been written to '/workspaces/PetChain-Contracts/backend-2fa/target/debug/deps/petchain_2fa-9ed141b61851f74a.long-type-13258251738249690868.txt'
+     = note: the full name for the type has been written to '/workspaces/CatChain-Contracts/backend-2fa/target/debug/deps/catchain_2fa-9ed141b61851f74a.long-type-13258251738249690868.txt'
      = note: consider using `--verbose` to print the full type name to the console
      = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
 
@@ -287,7 +287,7 @@ note: required by a bound in `next_element`
 1770 |     where
 1771 |         T: Deserialize<'de>,
      |            ^^^^^^^^^^^^^^^^ required by this bound in `SeqAccess::next_element`
-     = note: the full name for the type has been written to '/workspaces/PetChain-Contracts/backend-2fa/target/debug/deps/petchain_2fa-9ed141b61851f74a.long-type-1241260865423243335.txt'
+     = note: the full name for the type has been written to '/workspaces/CatChain-Contracts/backend-2fa/target/debug/deps/catchain_2fa-9ed141b61851f74a.long-type-1241260865423243335.txt'
      = note: consider using `--verbose` to print the full type name to the console
 
 error[E0277]: the trait bound `totp_rs::Algorithm: serde::Deserialize<'de>` is not satisfied
@@ -317,7 +317,7 @@ note: required by a bound in `next_value`
 1915 |     where
 1916 |         V: Deserialize<'de>,
      |            ^^^^^^^^^^^^^^^^ required by this bound in `MapAccess::next_value`
-     = note: the full name for the type has been written to '/workspaces/PetChain-Contracts/backend-2fa/target/debug/deps/petchain_2fa-9ed141b61851f74a.long-type-1241260865423243335.txt'
+     = note: the full name for the type has been written to '/workspaces/CatChain-Contracts/backend-2fa/target/debug/deps/catchain_2fa-9ed141b61851f74a.long-type-1241260865423243335.txt'
      = note: consider using `--verbose` to print the full type name to the console
 
 error[E0277]: the trait bound `totp_rs::Algorithm: serde::Deserialize<'de>` is not satisfied
@@ -347,7 +347,7 @@ note: required by a bound in `error::_::_serde::__private228::de::missing_field`
 25 | where
 26 |     V: Deserialize<'de>,
    |        ^^^^^^^^^^^^^^^^ required by this bound in `missing_field`
-   = note: the full name for the type has been written to '/workspaces/PetChain-Contracts/backend-2fa/target/debug/deps/petchain_2fa-9ed141b61851f74a.long-type-1241260865423243335.txt'
+   = note: the full name for the type has been written to '/workspaces/CatChain-Contracts/backend-2fa/target/debug/deps/catchain_2fa-9ed141b61851f74a.long-type-1241260865423243335.txt'
    = note: consider using `--verbose` to print the full type name to the console
    = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)
 
@@ -412,7 +412,7 @@ note: required by a bound in `error::_::_serde::ser::SerializeStruct::serialize_
 1916 |     where
 1917 |         T: ?Sized + Serialize;
      |                     ^^^^^^^^^ required by this bound in `SerializeStruct::serialize_field`
-     = note: the full name for the type has been written to '/workspaces/PetChain-Contracts/backend-2fa/target/debug/deps/petchain_2fa-54cec64bedea5c01.long-type-3625095821636077654.txt'
+     = note: the full name for the type has been written to '/workspaces/CatChain-Contracts/backend-2fa/target/debug/deps/catchain_2fa-54cec64bedea5c01.long-type-3625095821636077654.txt'
      = note: consider using `--verbose` to print the full type name to the console
      = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
 
@@ -443,7 +443,7 @@ note: required by a bound in `next_element`
 1770 |     where
 1771 |         T: Deserialize<'de>,
      |            ^^^^^^^^^^^^^^^^ required by this bound in `SeqAccess::next_element`
-     = note: the full name for the type has been written to '/workspaces/PetChain-Contracts/backend-2fa/target/debug/deps/petchain_2fa-54cec64bedea5c01.long-type-1803140776858864151.txt'
+     = note: the full name for the type has been written to '/workspaces/CatChain-Contracts/backend-2fa/target/debug/deps/catchain_2fa-54cec64bedea5c01.long-type-1803140776858864151.txt'
      = note: consider using `--verbose` to print the full type name to the console
 
 error[E0277]: the trait bound `totp_rs::Algorithm: serde::Deserialize<'de>` is not satisfied
@@ -473,7 +473,7 @@ note: required by a bound in `next_value`
 1915 |     where
 1916 |         V: Deserialize<'de>,
      |            ^^^^^^^^^^^^^^^^ required by this bound in `MapAccess::next_value`
-     = note: the full name for the type has been written to '/workspaces/PetChain-Contracts/backend-2fa/target/debug/deps/petchain_2fa-54cec64bedea5c01.long-type-1803140776858864151.txt'
+     = note: the full name for the type has been written to '/workspaces/CatChain-Contracts/backend-2fa/target/debug/deps/catchain_2fa-54cec64bedea5c01.long-type-1803140776858864151.txt'
      = note: consider using `--verbose` to print the full type name to the console
 
 error[E0277]: the trait bound `totp_rs::Algorithm: serde::Deserialize<'de>` is not satisfied
@@ -503,7 +503,7 @@ note: required by a bound in `error::_::_serde::__private228::de::missing_field`
 25 | where
 26 |     V: Deserialize<'de>,
    |        ^^^^^^^^^^^^^^^^ required by this bound in `missing_field`
-   = note: the full name for the type has been written to '/workspaces/PetChain-Contracts/backend-2fa/target/debug/deps/petchain_2fa-54cec64bedea5c01.long-type-1803140776858864151.txt'
+   = note: the full name for the type has been written to '/workspaces/CatChain-Contracts/backend-2fa/target/debug/deps/catchain_2fa-54cec64bedea5c01.long-type-1803140776858864151.txt'
    = note: consider using `--verbose` to print the full type name to the console
    = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)
 
@@ -540,8 +540,8 @@ error[E0433]: cannot find type `Algorithm` in this scope
 
 Some errors have detailed explanations: E0119, E0277, E0428, E0592, E0599.
 For more information about an error, try `rustc --explain E0119`.
-warning: `petchain-2fa` (lib) generated 2 warnings
-error: could not compile `petchain-2fa` (lib) due to 20 previous errors; 2 warnings emitted
+warning: `catchain-2fa` (lib) generated 2 warnings
+error: could not compile `catchain-2fa` (lib) due to 20 previous errors; 2 warnings emitted
 warning: build failed, waiting for other jobs to finish...
 error[E0433]: cannot find type `Algorithm` in this scope
     --> src/tests.rs:2846:28
@@ -576,5 +576,5 @@ warning: unused variable: `handlers`
      = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
 
 Some errors have detailed explanations: E0119, E0277, E0428, E0432, E0433, E0592, E0599.
-warning: `petchain-2fa` (lib test) generated 11 warnings (2 duplicates)
-error: could not compile `petchain-2fa` (lib test) due to 24 previous errors; 11 warnings emitted
+warning: `catchain-2fa` (lib test) generated 11 warnings (2 duplicates)
+error: could not compile `catchain-2fa` (lib test) due to 24 previous errors; 11 warnings emitted

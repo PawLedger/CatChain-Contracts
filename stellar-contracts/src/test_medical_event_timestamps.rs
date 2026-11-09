@@ -12,17 +12,17 @@
 // ============================================================
 
 use crate::{
-    ContractError, PetChainContract, PetChainContractClient, PrivacyLevel, Species, VaccineType,
+    ContractError, CatChainContract, CatChainContractClient, PrivacyLevel, Species, VaccineType,
 };
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     Address, Env, String, Vec,
 };
 
-fn setup(env: &Env) -> (PetChainContractClient<'static>, Address, Address, u64) {
+fn setup(env: &Env) -> (CatChainContractClient<'static>, Address, Address, u64) {
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
 
     let admin = Address::generate(env);
     let vet = Address::generate(env);
@@ -44,7 +44,7 @@ fn setup(env: &Env) -> (PetChainContractClient<'static>, Address, Address, u64) 
         &String::from_str(env, "Timestamp"),
         &String::from_str(env, "2020-01-01"),
         &crate::Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Mixed"),
         &String::from_str(env, "Brown"),
         &20,

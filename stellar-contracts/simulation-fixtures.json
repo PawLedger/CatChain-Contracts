@@ -7,14 +7,14 @@
   "simulations": [
     {
       "fixture_id": "success-register-pet",
-      "description": "Successful pet registration with valid owner and all required fields",
+      "description": "Successful cat registration with valid owner and all required fields",
       "function": "register_pet",
       "params": {
         "owner": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         "name": "TestPet",
         "birthday": "2020-01-01",
         "gender": "Male",
-        "species": "Dog",
+        "species": "Cat",
         "breed": "Labrador",
         "color": "Yellow",
         "weight": 25,

@@ -1,15 +1,15 @@
-use crate::{ContractError, Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+use crate::{ContractError, Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
 use soroban_sdk::{testutils::Address as _, Address, Env, String, Vec};
 
-fn setup(env: &Env) -> (PetChainContractClient, Address) {
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+fn setup(env: &Env) -> (CatChainContractClient, Address) {
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
     let admin = Address::generate(env);
     client.init_admin(&admin);
     (client, admin)
 }
 
-fn register(env: &Env, client: &PetChainContractClient, name: &str, species: &Species, breed: &str) -> u64 {
+fn register(env: &Env, client: &CatChainContractClient, name: &str, species: &Species, breed: &str) -> u64 {
     let owner = Address::generate(env);
     client.register_pet(
         &owner,
@@ -32,7 +32,7 @@ fn test_valid_name_accepted() {
     let env = Env::default();
     env.mock_all_auths();
     let (client, _) = setup(&env);
-    let id = register(&env, &client, "Buddy-2", &Species::Dog, "Labrador");
+    let id = register(&env, &client, "Buddy-2", &Species::Cat, "Labrador");
     assert!(id > 0);
 }
 
@@ -42,7 +42,7 @@ fn test_empty_name_rejected() {
     let env = Env::default();
     env.mock_all_auths();
     let (client, _) = setup(&env);
-    register(&env, &client, "", &Species::Dog, "Labrador");
+    register(&env, &client, "", &Species::Cat, "Labrador");
 }
 
 #[test]
@@ -52,7 +52,7 @@ fn test_name_too_long_rejected() {
     env.mock_all_auths();
     let (client, _) = setup(&env);
     // 65 chars
-    register(&env, &client, "AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFF123456789012", &Species::Dog, "Labrador");
+    register(&env, &client, "AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFF123456789012", &Species::Cat, "Labrador");
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn test_name_invalid_chars_rejected() {
     let env = Env::default();
     env.mock_all_auths();
     let (client, _) = setup(&env);
-    register(&env, &client, "Buddy@!", &Species::Dog, "Labrador");
+    register(&env, &client, "Buddy@!", &Species::Cat, "Labrador");
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn test_name_max_length_accepted() {
     env.mock_all_auths();
     let (client, _) = setup(&env);
     // exactly 64 chars
-    let id = register(&env, &client, "AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFF1234567890", &Species::Dog, "Labrador");
+    let id = register(&env, &client, "AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFF1234567890", &Species::Cat, "Labrador");
     assert!(id > 0);
 }
 
@@ -81,7 +81,7 @@ fn test_breed_accepted_when_no_whitelist() {
     let env = Env::default();
     env.mock_all_auths();
     let (client, _) = setup(&env);
-    let id = register(&env, &client, "Rex", &Species::Dog, "AnythingGoes");
+    let id = register(&env, &client, "Rex", &Species::Cat, "AnythingGoes");
     assert!(id > 0);
 }
 
@@ -94,9 +94,9 @@ fn test_breed_accepted_when_in_whitelist() {
     let mut breeds = Vec::new(&env);
     breeds.push_back(String::from_str(&env, "Labrador"));
     breeds.push_back(String::from_str(&env, "Poodle"));
-    client.set_breed_list(&admin, &Species::Dog, &breeds);
+    client.set_breed_list(&admin, &Species::Cat, &breeds);
 
-    let id = register(&env, &client, "Rex", &Species::Dog, "Labrador");
+    let id = register(&env, &client, "Rex", &Species::Cat, "Labrador");
     assert!(id > 0);
 }
 
@@ -109,9 +109,9 @@ fn test_breed_rejected_when_not_in_whitelist() {
 
     let mut breeds = Vec::new(&env);
     breeds.push_back(String::from_str(&env, "Labrador"));
-    client.set_breed_list(&admin, &Species::Dog, &breeds);
+    client.set_breed_list(&admin, &Species::Cat, &breeds);
 
-    register(&env, &client, "Rex", &Species::Dog, "Poodle");
+    register(&env, &client, "Rex", &Species::Cat, "Poodle");
 }
 
 #[test]
@@ -120,10 +120,10 @@ fn test_breed_whitelist_is_species_specific() {
     env.mock_all_auths();
     let (client, admin) = setup(&env);
 
-    // Set dog whitelist only
+    // Set cat whitelist only
     let mut dog_breeds = Vec::new(&env);
     dog_breeds.push_back(String::from_str(&env, "Labrador"));
-    client.set_breed_list(&admin, &Species::Dog, &dog_breeds);
+    client.set_breed_list(&admin, &Species::Cat, &dog_breeds);
 
     // Cat has no whitelist — any breed accepted
     let id = register(&env, &client, "Whiskers", &Species::Cat, "AnyCatBreed");
@@ -153,12 +153,12 @@ fn test_clear_breed_list_allows_any_breed() {
 
     let mut breeds = Vec::new(&env);
     breeds.push_back(String::from_str(&env, "Labrador"));
-    client.set_breed_list(&admin, &Species::Dog, &breeds);
+    client.set_breed_list(&admin, &Species::Cat, &breeds);
 
     // Clear by passing empty vec
-    client.set_breed_list(&admin, &Species::Dog, &Vec::new(&env));
+    client.set_breed_list(&admin, &Species::Cat, &Vec::new(&env));
 
     // Now any breed is accepted
-    let id = register(&env, &client, "Rex", &Species::Dog, "Poodle");
+    let id = register(&env, &client, "Rex", &Species::Cat, "Poodle");
     assert!(id > 0);
 }

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Reference implementation for the PetChain canonical consent hash (Issue #1337).
+Reference implementation for the CatChain canonical consent hash (Issue #1337).
 
 Reproduces, byte-for-byte, `canonical_consent_hash` in
 stellar-contracts/src/consent_canon.rs and prints the vectors asserted in
 stellar-contracts/src/test_consent_canonicalization.rs.
 
-Canonical format (domain "petchain:consent:v1")
+Canonical format (domain "catchain:consent:v1")
 -----------------------------------------------
 
     hash = sha256(domain
@@ -26,7 +26,7 @@ import base64
 import hashlib
 import struct
 
-DOMAIN = b"petchain:consent:v1"
+DOMAIN = b"catchain:consent:v1"
 
 
 def crc16_xmodem(data: bytes) -> int:

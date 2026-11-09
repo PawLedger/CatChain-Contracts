@@ -27,18 +27,18 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{ContractError, PetChainContract, PetChainContractClient, STORAGE_SCHEMA_VERSION};
+    use crate::{ContractError, CatChainContract, CatChainContractClient, STORAGE_SCHEMA_VERSION};
     use soroban_sdk::{testutils::Address as _, Address, Env, Error};
 
     // ─── helper ───────────────────────────────────────────────────────────────
 
-    fn setup() -> (Env, PetChainContractClient<'static>, Address, Address) {
+    fn setup() -> (Env, CatChainContractClient<'static>, Address, Address) {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
 
-        let contract_id = env.register(PetChainContract, ());
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register(CatChainContract, ());
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let admin = Address::generate(&env);
         let non_admin = Address::generate(&env);
@@ -218,7 +218,7 @@ mod tests {
             &soroban_sdk::String::from_str(&env, "Fido"),
             &soroban_sdk::String::from_str(&env, "2020-01-01"),
             &crate::Gender::Male,
-            &crate::Species::Dog,
+            &crate::Species::Cat,
             &soroban_sdk::String::from_str(&env, "Labrador"),
             &soroban_sdk::String::from_str(&env, "Brown"),
             &25u32,

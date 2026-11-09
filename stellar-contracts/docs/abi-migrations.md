@@ -1,6 +1,6 @@
 # Contract ABI & Storage-Key Migration Notes
 
-This file is the changelog for **intentional** changes to the PetChain
+This file is the changelog for **intentional** changes to the CatChain
 Soroban contract's public interface (`stellar-contracts/src/lib.rs`).
 
 Three automated guards exist to catch *unintentional* changes:
@@ -59,98 +59,6 @@ Breaking changes require a detailed entry in this document explaining
 the impact on off-chain consumers and any required data migration.
 
 ## Log
-
-### 2026-10-20 — Insurance benefit controls (#1473–#1475)
-
-**New public ABI (additive):** `set_condition_coverage`,
-`get_condition_coverage`, `get_condition_period_usage`,
-`get_insurance_benefit_claim`, `submit_condition_claim`, and
-`settle_condition_claim`; new contract types
-`ConditionCoverage`, `ConditionPeriodUsage`, `InsuranceBenefitClaim`,
-`InsuranceConditionCoverageConfiguredEvent`,
-`InsuranceBenefitClaimSubmittedEvent`, and `InsuranceBenefitSettledEvent`.
-Legacy `InsurancePolicy` and `InsuranceClaim` layouts remain unchanged.
-
-**New append-only storage keys:** per-policy condition terms, per-period
-paid/pending usage, a claim-to-benefit record, and a policy benefit-claim
-counter. Existing keys and structs are not modified, so no data migration or
-storage-schema version bump is required. Limits are 32 condition sections per
-pet and policy and 256 condition claims per pet and policy; each claim creates
-at most one usage entry. New APIs scan at most 32 policy entries.
-Condition terms are immutable once configured. See
-[`insurance-benefits.md`](insurance-benefits.md) for service-date, settlement,
-rounding, authorization, event, and error semantics.
-
-**New contract errors (append-only):** 209–219,
-`BenefitConditionNotFound` through `BenefitTermsAlreadyConfigured`.
-Declarations 220–226 restore referenced but previously missing enrollment and
-policy errors (`EnrollmentNotFound`, `EnrollmentInvalidTransition`,
-`EnrollmentAlreadyDecided`, `EnrollmentLimitReached`,
-`EnrollmentSnapshotTooLarge`, `InsurancePolicyInactive`,
-`InsurancePolicyNotFound`). `BenefitClaimLimitPerPetReached` (227) bounds the
-per-pet claims. The error registry and ABI snapshot are updated.
-`condition_cover` records immutable terms, `benefit_claim` emits calculated
-settlement terms, and `benefit_settled` records the final decision. These new
-events carry `EVENT_SCHEMA_VERSION`; existing event shapes are unchanged.
-
-**Compatibility impact:** additive. Existing claim methods continue to serve
-legacy claims; condition-benefit claims are restricted to the dedicated
-settlement method so legacy payout and appeal methods cannot bypass their
-condition accounting.
-
-`InvalidTimestamp` remains at its already-published code 169. The source had
-accidentally assigned it the same value as `StaleMigration` (170); restoring
-169 preserves the published error mapping and removes the duplicate.
-
-### 2026-09-28 — Insurance enrollment application workflow + coverage schedule snapshots (#1470, #1472)
-
-**New public ABI (intentional, additive):**
-- #1470: `create_enrollment_application`, `submit_enrollment_application`,
-  `begin_enrollment_review`, `accept_enrollment_application`,
-  `decline_enrollment_application`, `get_enrollment_application`,
-  `get_enrollment_application_count`, `get_enrollment_status`,
-  `get_enrollment_policy_version`. Applications move through the states
-  `Draft -> Submitted -> UnderReview -> Accepted | Declined`; every
-  transition is authorized (owner for draft/submit, admin for review and
-  decisions) and binds the decision to an explicit policy version, so a
-  replayed or stale-version call fails with `EnrollmentVersionMismatch`
-  and leaves state unchanged.
-- #1472: `get_enrollment_coverage_snapshot`,
-  `get_enrollment_exclusion_snapshot`,
-  `compute_coverage_snapshot_digest`. Immutable coverage and exclusion
-  snapshots are captured at enrollment time and are never rewritten by
-  later policy edits; the digest lets off-chain consumers verify the
-  snapshot contents.
-- New contract types: `EnrollmentApplication`, `EnrollmentStatus`,
-  `CoverageSnapshot`, `ExclusionSnapshot`, `CoverageSnapshotDigest`.
-  See `docs/insurance-enrollment.md`.
-
-**New storage-key enums (append-only, pinned in
-`test_discriminant_stability.rs`):** `EnrollmentKey` (application records,
-per-owner application index, and status index) and
-`CoverageSnapshotKey` (coverage/exclusion snapshots keyed by enrollment
-id). Both are appended after the existing variants; no existing key was
-renamed, removed, or reordered. Snapshot entries are written once and are
-immutable, so persistent state growth is bounded by the number of
-enrollments (each enrollment stores at most one coverage and one exclusion
-snapshot, with input vectors capped at `MAX_COVERAGE_ITEMS` /
-`MAX_EXCLUSION_ITEMS`).
-
-**New `ContractError` variants (appended, additive):**
-`EnrollmentNotFound` (188), `EnrollmentInvalidStatus` (189),
-`EnrollmentVersionMismatch` (190), `EnrollmentAlreadySubmitted` (191),
-`EnrollmentSnapshotImmutable` (192), `CoverageSnapshotTooLarge` (193),
-`ExclusionSnapshotTooLarge` (194). All are pinned in
-`test_error_registry.rs`; no existing discriminant changed.
-
-**New events (additive):** `EnrollmentCreated`, `EnrollmentSubmitted`,
-`EnrollmentReviewStarted`, `EnrollmentAccepted`, `EnrollmentDeclined`,
-`CoverageSnapshotStored`. Each carries the enrollment id and the policy
-version it was bound to.
-
-**Compatibility impact:** purely additive — no existing function
-signature, event struct, error discriminant, or storage key changed, so no
-data migration is required. `abi-snapshot.txt` was regenerated.
 
 ### 2026-09-24 — Error compatibility policy (#1255)
 

@@ -1,13 +1,13 @@
 // Tests for binding decryption tokens to encryption key versions
 // (Issue #1163): tokens issued under one key version must not verify
 // once the pet's key has been rotated to a new version.
-use crate::{AccessLevel, Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+use crate::{AccessLevel, Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
 use soroban_sdk::{testutils::{Address as _, Ledger as _}, Address, Env, String};
 
-fn setup(env: &Env) -> (PetChainContractClient<'_>, Address, u64) {
+fn setup(env: &Env) -> (CatChainContractClient<'_>, Address, u64) {
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
 
     let owner = Address::generate(env);
     let pet_id = client.register_pet(
@@ -15,7 +15,7 @@ fn setup(env: &Env) -> (PetChainContractClient<'_>, Address, u64) {
         &String::from_str(env, "TokenPet"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Brown"),
         &10,
@@ -142,8 +142,8 @@ fn test_zero_ttl_rejected() {
 fn test_combined_transfer_then_rotation_leaves_delegate_fully_revoked() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     // Restricted so that view access actually depends on an AccessGrant

@@ -6,19 +6,19 @@ mod test_pet_deactivation_lifecycle {
         Env,
     };
 
-    fn setup() -> (Env, PetChainContractClient<'static>, Address) {
+    fn setup() -> (Env, CatChainContractClient<'static>, Address) {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let owner = Address::generate(&env);
         (env, client, owner)
     }
 
     fn register_active_pet(
         env: &Env,
-        client: &PetChainContractClient<'static>,
+        client: &CatChainContractClient<'static>,
         owner: &Address,
     ) -> u64 {
         let pet_id = client.register_pet(
@@ -26,7 +26,7 @@ mod test_pet_deactivation_lifecycle {
             &String::from_str(env, "Buddy"),
             &String::from_str(env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(env, "Golden Retriever"),
             &PrivacyLevel::Public,
         );

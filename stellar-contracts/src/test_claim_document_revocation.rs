@@ -1,6 +1,6 @@
 // Claim-document status/version lifecycle tests (Issue #1341).
 use crate::{
-    ClaimDocumentStatus, ContractError, Gender, PetChainContract, PetChainContractClient,
+    ClaimDocumentStatus, ContractError, Gender, CatChainContract, CatChainContractClient,
     PrivacyLevel, Species,
 };
 use soroban_sdk::{
@@ -12,19 +12,19 @@ const CLAIM: u64 = 7;
 
 struct Ctx<'a> {
     env: Env,
-    client: PetChainContractClient<'a>,
+    client: CatChainContractClient<'a>,
     admin: Address,
     owner: Address,
     pet_id: u64,
 }
 
-fn register_pet(env: &Env, client: &PetChainContractClient, owner: &Address) -> u64 {
+fn register_pet(env: &Env, client: &CatChainContractClient, owner: &Address) -> u64 {
     client.register_pet(
         owner,
         &String::from_str(env, "Rex"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Brown"),
         &20,
@@ -36,8 +36,8 @@ fn register_pet(env: &Env, client: &PetChainContractClient, owner: &Address) -> 
 fn setup<'a>() -> Ctx<'a> {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
     let owner = Address::generate(&env);
     client.init_admin(&admin);

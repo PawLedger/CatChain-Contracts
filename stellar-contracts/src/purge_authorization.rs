@@ -22,8 +22,8 @@
 use soroban_sdk::{contracttype, Address, BytesN};
 
 pub const MAX_PURGE_BATCH: u32 = 25;
-pub const PURGE_CONFIRMATION_DOMAIN: &[u8] = b"petchain:purge-confirmation:v1";
-pub const PURGE_RECORDS_DIGEST_DOMAIN: &[u8] = b"petchain:purge-records:v1";
+pub const PURGE_CONFIRMATION_DOMAIN: &[u8] = b"catchain:purge-confirmation:v1";
+pub const PURGE_RECORDS_DIGEST_DOMAIN: &[u8] = b"catchain:purge-records:v1";
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]

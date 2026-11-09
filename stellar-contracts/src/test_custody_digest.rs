@@ -10,7 +10,7 @@
 //     digest = sha256(state || u32be(sequence))
 //
 // entry_bytes is the canonical serialisation of a CustodyEntry
-// (see `PetChainContract::canonical_custody_entry_bytes`):
+// (see `CatChainContract::canonical_custody_entry_bytes`):
 //
 //     u32be(len(from_xdr)) || from_xdr
 //     || u32be(len(to_xdr)) || to_xdr
@@ -27,8 +27,8 @@
 // ============================================================
 
 use crate::{
-    ContractError, CustodyChainDigest, CustodyEntry, Gender, PetChainContract,
-    PetChainContractClient, PrivacyLevel, Species, SystemKey, TransferType,
+    ContractError, CustodyChainDigest, CustodyEntry, Gender, CatChainContract,
+    CatChainContractClient, PrivacyLevel, Species, SystemKey, TransferType,
 };
 use soroban_sdk::{testutils::Address as _, Address, Env, Error, String, Vec};
 
@@ -49,23 +49,23 @@ const REORDERED_PET1: &str = "1265e034f391c9233c9231c5e89fd8634401342ceef889d0bb
 const TAMPERED_TO_PET1: &str = "f1a878686671708d444fc124e42458f6997f9845bbcf28e33c493d29c7301853";
 const TWO_PET7: &str = "367ab935bd7019e3e1a96e7fa2ca8b1c30f0eb65cefed1184f3c0747fea18ae2";
 
-fn setup(env: &Env) -> (PetChainContractClient, Address, Address) {
+fn setup(env: &Env) -> (CatChainContractClient, Address, Address) {
     env.mock_all_auths();
     env.budget().reset_unlimited();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
     let owner = Address::generate(env);
     client.init_admin(&owner);
     (client, owner, contract_id)
 }
 
-fn register_pet(client: &PetChainContractClient, env: &Env, owner: &Address) -> u64 {
+fn register_pet(client: &CatChainContractClient, env: &Env, owner: &Address) -> u64 {
     client.register_pet(
         owner,
         &String::from_str(env, "Buddy"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Golden"),
         &30,
@@ -314,7 +314,7 @@ fn published_vector_pet_id_is_bound() {
 // Behavioural tamper cases (no hardcoded constants)
 // ---------------------------------------------------------------
 
-fn digest_of(client: &PetChainContractClient, pet_id: u64) -> [u8; 32] {
+fn digest_of(client: &CatChainContractClient, pet_id: u64) -> [u8; 32] {
     client.get_custody_chain_digest(&pet_id).digest.to_array()
 }
 

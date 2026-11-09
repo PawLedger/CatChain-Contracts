@@ -7,7 +7,7 @@
  },
  "enums": [
   {
-   "contract": "petchain",
+   "contract": "catchain",
    "source": "src/lib.rs",
    "enum": "ContractError",
    "retired": [],
@@ -86,52 +86,13 @@
     { "code": 185, "name": "IssuerKeyVersionNotFound", "retry": "never" },
     { "code": 186, "name": "IssuerKeyVersionInactive", "retry": "never" },
     { "code": 187, "name": "IssuerKeyReused", "retry": "never" },
-    { "code": 188, "name": "RevokedConsentReplay", "retry": "never" },
-    { "code": 189, "name": "EnrollmentNotFound", "retry": "never" },
-    { "code": 190, "name": "InvalidEnrollmentState", "retry": "after_state_change" },
-    { "code": 191, "name": "EnrollmentAlreadyExists", "retry": "treat_as_success" },
-    { "code": 192, "name": "EnrollmentNotExpired", "retry": "after_state_change" },
-    { "code": 193, "name": "PolicyVersionNotFound", "retry": "never" },
-    { "code": 194, "name": "PolicyVersionMismatch", "retry": "after_state_change" },
-    { "code": 195, "name": "CoverageSnapshotNotFound", "retry": "never" },
-    { "code": 196, "name": "CoverageSnapshotMismatch", "retry": "never" },
-    { "code": 197, "name": "TooManyCoverageItems", "retry": "never" },
-    { "code": 198, "name": "TooManyExclusionItems", "retry": "never" },
-    { "code": 199, "name": "InvalidCoverageAmount", "retry": "never" },
-    { "code": 200, "name": "ClaimNotFound", "retry": "never" },
-    { "code": 201, "name": "ClaimInvalidStatus", "retry": "after_state_change" },
-    { "code": 202, "name": "ClaimNotRejected", "retry": "never" },
-    { "code": 203, "name": "AppealWindowExpired", "retry": "never" },
-    { "code": 204, "name": "ClaimAlreadyAppealed", "retry": "never" },
-    { "code": 205, "name": "ClaimNotUnderAppeal", "retry": "never" },
-    { "code": 206, "name": "ReviewerCannotBeOriginal", "retry": "never" },
-    { "code": 207, "name": "ClaimDocumentLimitReached", "retry": "never" },
-    { "code": 208, "name": "PolicyPetNotFound", "retry": "never" },
-    { "code": 209, "name": "BenefitConditionNotFound", "retry": "never" },
-    { "code": 210, "name": "BenefitConditionLimitReached", "retry": "never" },
-    { "code": 211, "name": "BenefitWaitingPeriod", "retry": "after_state_change" },
-    { "code": 212, "name": "BenefitInvalidServiceDate", "retry": "never" },
-    { "code": 213, "name": "BenefitCoverageLimitExceeded", "retry": "never" },
-    { "code": 214, "name": "BenefitClaimNotPending", "retry": "never" },
-    { "code": 215, "name": "BenefitClaimAlreadyFinalized", "retry": "never" },
-    { "code": 216, "name": "BenefitInvalidTerms", "retry": "never" },
-    { "code": 217, "name": "BenefitClaimLimitReached", "retry": "never" },
-    { "code": 218, "name": "BenefitClaimMustUseSettlement", "retry": "never" },
-    { "code": 219, "name": "BenefitTermsAlreadyConfigured", "retry": "never" },
-    { "code": 220, "name": "EnrollmentNotFound", "retry": "never" },
-    { "code": 221, "name": "EnrollmentInvalidTransition", "retry": "after_state_change" },
-    { "code": 222, "name": "EnrollmentAlreadyDecided", "retry": "never" },
-    { "code": 223, "name": "EnrollmentLimitReached", "retry": "never" },
-    { "code": 224, "name": "EnrollmentSnapshotTooLarge", "retry": "never" },
-    { "code": 225, "name": "InsurancePolicyInactive", "retry": "after_state_change" },
-    { "code": 226, "name": "InsurancePolicyNotFound", "retry": "never" },
-    { "code": 227, "name": "BenefitClaimLimitPerPetReached", "retry": "never" }
+    { "code": 188, "name": "RevokedConsentReplay", "retry": "never" }
    ]
   },
   {
-   "contract": "petchain",
+   "contract": "catchain",
    "source": "src/lib.rs",
-   "enum": "PetChainError",
+   "enum": "CatChainError",
    "retired": [],
    "errors": [
     { "code": 1, "name": "NonceReused", "retry": "after_state_change" },
@@ -142,8 +103,8 @@
    ]
   },
   {
-   "contract": "pet-transfer-adoption",
-   "source": "contracts/pet-transfer-adoption/src/lib.rs",
+   "contract": "cat-transfer-adoption",
+   "source": "contracts/cat-transfer-adoption/src/lib.rs",
    "enum": "ContractError",
    "retired": [],
    "errors": [
@@ -184,8 +145,8 @@
    ]
   },
   {
-   "contract": "pet-transfer-adoption (escrow)",
-   "source": "contracts/pet-transfer-adoption/src/escrow.rs",
+   "contract": "cat-transfer-adoption (escrow)",
+   "source": "contracts/cat-transfer-adoption/src/escrow.rs",
    "enum": "EscrowError",
    "retired": [],
    "errors": [
@@ -201,7 +162,7 @@
   },
   {
    "contract": "vet-registry",
-   "source": "contracts/pet-transfer-adoption/src/vet_registry.rs",
+   "source": "contracts/cat-transfer-adoption/src/vet_registry.rs",
    "enum": "ContractError",
    "retired": [],
    "errors": [

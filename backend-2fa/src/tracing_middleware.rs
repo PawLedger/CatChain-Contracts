@@ -5,7 +5,7 @@
 /// Usage (actix-web):
 /// ```rust
 /// use actix_web::App;
-/// use petchain_2fa::tracing_middleware::RequestIdMiddleware;
+/// use catchain_2fa::tracing_middleware::RequestIdMiddleware;
 /// let _app = App::new().wrap(RequestIdMiddleware);
 /// ```
 use actix_web::{

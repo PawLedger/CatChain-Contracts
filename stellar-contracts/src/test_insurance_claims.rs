@@ -1,5 +1,5 @@
 use crate::{
-    Gender, InsuranceClaimStatus, PetChainContract, PetChainContractClient, PrivacyLevel, Species,
+    Gender, InsuranceClaimStatus, CatChainContract, CatChainContractClient, PrivacyLevel, Species,
 };
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
@@ -8,8 +8,8 @@ fn test_submit_and_get_claim() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
 
@@ -18,7 +18,7 @@ fn test_submit_and_get_claim() {
         &String::from_str(&env, "Rex"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Brown"),
         &String::from_str(&env, "Mixed"),
         &20,
@@ -59,8 +59,8 @@ fn test_submit_claim_inactive_policy() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
 
@@ -109,8 +109,8 @@ fn test_update_claim_status() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
 
@@ -119,7 +119,7 @@ fn test_update_claim_status() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2019-05-05"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden"),
         &String::from_str(&env, "Golden Retriever"),
         &30,
@@ -158,8 +158,8 @@ fn test_get_all_pet_claims() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
 
@@ -203,8 +203,8 @@ fn test_get_insurance_claim_count() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
 
@@ -213,7 +213,7 @@ fn test_get_insurance_claim_count() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2021-06-15"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Black"),
         &String::from_str(&env, "Labrador"),
         &25,
@@ -254,8 +254,8 @@ fn test_get_insurance_claim_count_no_claims() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
 
@@ -278,7 +278,7 @@ fn test_get_insurance_claim_count_no_claims() {
 
 fn setup_pet_with_claims(
     env: &Env,
-    client: &PetChainContractClient,
+    client: &CatChainContractClient,
 ) -> u64 {
     let owner = Address::generate(env);
     let pet_id = client.register_pet(
@@ -286,7 +286,7 @@ fn setup_pet_with_claims(
         &String::from_str(env, "Cleo"),
         &String::from_str(env, "2020-03-15"),
         &crate::Gender::Female,
-        &crate::Species::Dog,
+        &crate::Species::Cat,
         &String::from_str(env, "Spotted"),
         &String::from_str(env, "Dalmatian"),
         &22,
@@ -312,8 +312,8 @@ fn setup_pet_with_claims(
 fn test_get_claims_by_status_pending() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let pet_id = setup_pet_with_claims(&env, &client);
 
@@ -330,8 +330,8 @@ fn test_get_claims_by_status_pending() {
 fn test_get_claims_by_status_approved() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let pet_id = setup_pet_with_claims(&env, &client);
 
@@ -348,8 +348,8 @@ fn test_get_claims_by_status_approved() {
 fn test_get_claims_by_status_rejected() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let pet_id = setup_pet_with_claims(&env, &client);
 
@@ -366,8 +366,8 @@ fn test_get_claims_by_status_rejected() {
 fn test_get_claims_by_status_paid() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let pet_id = setup_pet_with_claims(&env, &client);
 
@@ -383,8 +383,8 @@ fn test_get_claims_by_status_paid() {
 fn test_get_claims_by_status_empty() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let pet_id = setup_pet_with_claims(&env, &client);
 

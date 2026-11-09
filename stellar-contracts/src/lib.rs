@@ -33,7 +33,7 @@ pub const EVENT_SCHEMA_VERSION: u32 = 1;
 //   ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Idempotent  ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â calling it again with the same target returns StaleMigration.
 //   ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Resumable   ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â only advances forward; never rolls back the schema version.
 // ---------------------------------------------------------------------------
-pub const STORAGE_SCHEMA_VERSION: u32 = 2;
+pub const STORAGE_SCHEMA_VERSION: u32 = 1;
 
 /// Canonical enum for off-chain indexers to identify the active event schema.
 /// Bump the variant and `EVENT_SCHEMA_VERSION` together whenever fields change.
@@ -83,29 +83,6 @@ pub enum InsuranceKey {
     ClaimSettled(u64), // claim_id -> bool; present+true means already paid
     // Reviewer tracking for appeal anti-replay
     ClaimReviewer(u64), // claim_id -> Address of first reviewer
-    // Issue #1470: insurance enrollment application workflow.
-    // EnrollmentCount -> u64 (monotonic id allocator)
-    EnrollmentCount,
-    // Enrollment(u64) -> InsuranceEnrollment
-    Enrollment(u64),
-    // PetEnrollmentCount(u64) -> u64 (pet_id -> number of enrollments)
-    PetEnrollmentCount(u64),
-    // PetEnrollmentIndex((u64, u64)) -> enrollment_id
-    PetEnrollmentIndex((u64, u64)),
-    // EnrollmentDecision(u64) -> bool; present+true means the decision was
-    // already applied (replay guard for accept/decline).
-    EnrollmentDecision(u64),
-    // Issue #1472: immutable coverage/exclusion snapshot per enrollment.
-    // CoverageSnapshot(u64) -> CoverageSnapshot (enrollment_id -> snapshot)
-    CoverageSnapshot(u64),
-    // Issues #1473-#1475: bounded condition terms, period usage and claim data.
-    ConditionCoverage((u64, String, String)),
-    ConditionUsage((u64, String, String, u64)),
-    PolicyConditionCount((u64, String)),
-    BenefitClaim(u64),
-    PolicyBenefitClaimCount((u64, String)),
-    PetConditionCount(u64),
-    PetBenefitClaimCount(u64),
 }
 
 #[contracttype]
@@ -239,11 +216,6 @@ pub use consent_policy::*;
 
 pub mod insurance_state;
 
-// Issue #1470 / #1472: insurance enrollment application workflow and
-// immutable coverage/exclusion snapshots.
-mod insurance_enrollment;
-pub use insurance_enrollment::*;
-
 mod test_access_grant_pagination;
 #[cfg(test)]
 mod test_access_revocation_cascade;
@@ -293,8 +265,6 @@ mod test_get_pets_overdue_vaccinations;
 #[cfg(test)]
 mod test_insurance_eligibility;
 #[cfg(test)]
-mod test_insurance_benefits;
-#[cfg(test)]
 mod test_license_uniqueness;
 #[cfg(test)]
 mod test_medical_record_soft_delete;
@@ -328,10 +298,6 @@ mod test_consent_versioning;
 mod test_consent_cleanup;
 #[cfg(test)]
 mod test_vet_credential_issuer_rotation;
-#[cfg(test)]
-mod test_insurance_enrollment;
-#[cfg(test)]
-mod test_insurance_coverage_snapshot;
 
 const DEFAULT_NONCE_MAX_USES: u32 = 1;
 const NONCE_HISTORY_LIMIT: u32 = 8;
@@ -414,10 +380,10 @@ const MAX_CUSTODY_CHAIN: u32 = 100;
 const MAX_CONSENT_CLEANUP_STEPS: u32 = 50;
 
 /// Canonical domain string for the chain-of-custody digest
-/// ([`PetChainContract::get_custody_chain_digest`]). The domain binds the
+/// ([`CatChainContract::get_custody_chain_digest`]). The domain binds the
 /// digest to this contract so digests of identical chains from other domains
 /// cannot be confused.
-pub const CUSTODY_DIGEST_DOMAIN: &str = "petchain.custody";
+pub const CUSTODY_DIGEST_DOMAIN: &str = "catchain.custody";
 
 /// Canonical digest format version. Bump whenever the canonical entry
 /// serialisation or digest construction changes. Consumers must only compare
@@ -450,7 +416,7 @@ const MAX_SUPPORTED_LANGUAGES: u32 = 50;
 // Validation uses the existing `validate_len` / `panic_with_error` pattern.
 // ---------------------------------------------------------------------------
 
-/// Maximum byte length of a `color` field (pet registration).
+/// Maximum byte length of a `color` field (cat registration).
 const MAX_COLOR_LEN: u32 = 50;
 const MAX_MICROCHIP_ID_LEN: usize = 64;
 
@@ -610,7 +576,7 @@ pub struct PetAge {
 #[contracterror]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
-pub enum PetChainError {
+pub enum CatChainError {
     NonceReused = 1,
     SelfLineage = 2,
     CircularLineage = 3,
@@ -697,8 +663,8 @@ pub enum ContractError {
     /// A medical-event timestamp fell outside the allowed domain relative to
     /// ledger time (too far in the past, too far in the future, or with a
     /// due/expiry date before the event it describes). (Issue #1174)
-    /// Stable published code; `StaleMigration` uses 170.
-    InvalidTimestamp = 169,
+    /// Formerly 169 (collision with `StaleMigration`); moved to 170.
+    InvalidTimestamp = 170,
 
     // --- Repaired merge drift: variants referenced by #1264 / #1275 but
     // dropped from the enum. 48-51 are the values already published in
@@ -799,26 +765,6 @@ pub enum ContractError {
 
     /// `add_insurance_policy` was called for a pet that does not exist.
     PolicyPetNotFound = 208,
-
-    BenefitConditionNotFound = 209,
-    BenefitConditionLimitReached = 210,
-    BenefitWaitingPeriod = 211,
-    BenefitInvalidServiceDate = 212,
-    BenefitCoverageLimitExceeded = 213,
-    BenefitClaimNotPending = 214,
-    BenefitClaimAlreadyFinalized = 215,
-    BenefitInvalidTerms = 216,
-    BenefitClaimLimitReached = 217,
-    BenefitClaimMustUseSettlement = 218,
-    BenefitTermsAlreadyConfigured = 219,
-    EnrollmentNotFound = 220,
-    EnrollmentInvalidTransition = 221,
-    EnrollmentAlreadyDecided = 222,
-    EnrollmentLimitReached = 223,
-    EnrollmentSnapshotTooLarge = 224,
-    InsurancePolicyInactive = 225,
-    InsurancePolicyNotFound = 226,
-    BenefitClaimLimitPerPetReached = 227,
 }
 
 // --- MULTI-LANGUAGE ERROR REGISTRY (Issue #684) ---
@@ -841,7 +787,7 @@ pub enum ErrorRegistryKey {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Species {
     Other,
-    Dog,
+    Cat,
     Cat,
     Bird,
     Rabbit,
@@ -1360,7 +1306,7 @@ pub struct PetFullProfileBatch {
     pub latest_medical_record_id: Option<u64>,
 }
 
-/// Batch read structure for pet health summary
+/// Batch read structure for cat health summary
 #[contracttype]
 #[derive(Clone)]
 pub struct PetHealthSummary {
@@ -1529,7 +1475,7 @@ pub enum CertificateStatus {
 /// - `version`: Schema version (matches `EVENT_SCHEMA_VERSION`).
 /// - `tag_id`: The unique tag identifier (BytesN<32>).
 /// - `pet_id`: ID of the pet the tag is linked to.
-/// - `owner`: Address of the pet owner who linked the tag.
+/// - `owner`: Address of the cat owner who linked the tag.
 /// - `timestamp`: Ledger timestamp when the link was created.
 pub struct TagLinkedEvent {
     pub version: u32,
@@ -1547,7 +1493,7 @@ pub struct TagLinkedEvent {
 /// - `version`: Schema version (matches `EVENT_SCHEMA_VERSION`).
 /// - `tag_id`: The unique tag identifier.
 /// - `pet_id`: ID of the pet the tag was linked to.
-/// - `deactivated_by`: Address of the pet owner who deactivated it.
+/// - `deactivated_by`: Address of the cat owner who deactivated it.
 /// - `timestamp`: Ledger timestamp of the deactivation.
 pub struct TagDeactivatedEvent {
     pub version: u32,
@@ -1587,7 +1533,7 @@ pub struct UpgradeProposal {
 /// - `version`: Schema version (matches `EVENT_SCHEMA_VERSION`).
 /// - `tag_id`: The unique tag identifier.
 /// - `pet_id`: ID of the pet the tag is linked to.
-/// - `reactivated_by`: Address of the pet owner who reactivated it.
+/// - `reactivated_by`: Address of the cat owner who reactivated it.
 /// - `timestamp`: Ledger timestamp of the reactivation.
 pub struct TagReactivatedEvent {
     pub version: u32,
@@ -1635,7 +1581,7 @@ pub enum DataKey {
     PetDelegationCount(u64),
     DecryptionToken((u64, Address)),
     /// Current encryption key version for a pet (Issue #1163). Absent means
-    /// version 1, matching [`PetChainContract::derive_versioned_key`]'s
+    /// version 1, matching [`CatChainContract::derive_versioned_key`]'s
     /// treatment of versions `<= 1` as the base key.
     PetKeyVersion(u64),
     EmergencyAccessLogs(u64),
@@ -1781,7 +1727,7 @@ pub enum ConsentKey {
 
 #[contracttype]
 pub enum CrossChainKey {
-    PetChainMapping((u64, String)),
+    CatChainMapping((u64, String)),
     ChainLookup((String, String)),
 }
 
@@ -2269,7 +2215,7 @@ pub struct AccessGrantPage {
 /// A decryption delegation token bound to the encryption key version that
 /// was active when it was issued (Issue #1163). Rotating a pet's key
 /// version deterministically invalidates every outstanding token, since
-/// [`PetChainContract::verify_decryption_token`] requires an exact version
+/// [`CatChainContract::verify_decryption_token`] requires an exact version
 /// match rather than trusting a possibly-stale expiry alone.
 #[contracttype]
 #[derive(Clone)]
@@ -2457,7 +2403,7 @@ pub struct CustodyEntry {
     pub transfer_type: TransferType,
 }
 
-/// Result of [`PetChainContract::verify_custody_chain`].
+/// Result of [`CatChainContract::verify_custody_chain`].
 ///
 /// `gap_at` identifies the index in the custody chain (0-based) where the
 /// break was found: either the first entry's `from` doesn't match the pet's
@@ -2473,7 +2419,7 @@ pub struct CustodyVerificationResult {
 
 /// Canonical digest of a pet's chain-of-custody history.
 ///
-/// See [`PetChainContract::get_custody_chain_digest`] for the exact
+/// See [`CatChainContract::get_custody_chain_digest`] for the exact
 /// construction. `digest` commits to `domain`, `version`, `pet_id`,
 /// `sequence` (the number of entries hashed) and every entry in canonical
 /// (chronological) order, so a consumer can recompute it from a returned
@@ -2562,7 +2508,7 @@ pub struct PendingThresholdChange {
 }
 
 /// Multi-signature configuration for a pet.
-/// Enables multiple parties to approve pet ownership transfers.
+/// Enables multiple parties to approve cat ownership transfers.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MultisigConfig {
@@ -2587,7 +2533,7 @@ pub struct AdminTimelockConfig {
     pub enabled: bool,
 }
 
-/// Proposal for transferring pet ownership with multi-signature approval.
+/// Proposal for transferring cat ownership with multi-signature approval.
 #[contracttype]
 #[derive(Clone)]
 pub struct PetTransferProposal {
@@ -2666,79 +2612,6 @@ pub struct InsurancePolicy {
     pub start_date: u64,
     pub expiry_date: u64,
     pub active: bool,
-}
-
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ConditionCoverage {
-    pub coverage_start: u64,
-    pub waiting_period_end: u64,
-    pub period_secs: u64,
-    pub coverage_limit: u64,
-    pub deductible: u64,
-    pub copay_bps: u32,
-}
-
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ConditionPeriodUsage {
-    pub paid: u64,
-    pub pending: u64,
-}
-
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct InsuranceConditionCoverageConfiguredEvent {
-    pub version: u32,
-    pub pet_id: u64,
-    pub policy_id: String,
-    pub condition: String,
-    pub coverage_start: u64,
-    pub waiting_period_end: u64,
-    pub period_secs: u64,
-    pub coverage_limit: u64,
-    pub deductible: u64,
-    pub copay_bps: u32,
-    pub timestamp: u64,
-}
-
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct InsuranceBenefitClaim {
-    pub condition: String,
-    pub period_start: u64,
-    pub deductible_applied: u64,
-    pub copay: u64,
-    pub insurer_payment: u64,
-    pub finalized: bool,
-}
-
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct InsuranceBenefitClaimSubmittedEvent {
-    pub version: u32,
-    pub claim_id: u64,
-    pub pet_id: u64,
-    pub policy_id: String,
-    pub condition: String,
-    pub service_date: u64,
-    pub deductible_applied: u64,
-    pub copay: u64,
-    pub insurer_payment: u64,
-    pub timestamp: u64,
-}
-
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct InsuranceBenefitSettledEvent {
-    pub version: u32,
-    pub claim_id: u64,
-    pub pet_id: u64,
-    pub condition: String,
-    pub period_start: u64,
-    pub insurer_payment: u64,
-    pub approved: bool,
-    pub timestamp: u64,
 }
 
 #[contracttype]
@@ -3165,10 +3038,10 @@ pub struct GroomingRecordCreatedEvent {
 }
 
 #[contract]
-pub struct PetChainContract;
+pub struct CatChainContract;
 
 #[contractimpl]
-impl PetChainContract {
+impl CatChainContract {
     // --- CONTRACT STATISTICS ---
 
     pub fn register_subscription(
@@ -3353,7 +3226,7 @@ impl PetChainContract {
     }
 
     /// Returns the number of registered pets for a given species.
-    /// Pass the species name as a string: "Dog", "Cat", "Bird", or "Other".
+    /// Pass the species name as a string: "Cat", "Cat", "Bird", or "Other".
     pub fn get_species_count(env: Env, species: String) -> u64 {
         env.storage()
             .instance()
@@ -4798,7 +4671,7 @@ impl PetChainContract {
                 break;
             }
 
-            let overdue = PetChainContract::get_overdue_vaccinations(env.clone(), pet_id);
+            let overdue = CatChainContract::get_overdue_vaccinations(env.clone(), pet_id);
 
             let has_record = match &vet_address {
                 Some(vet) => Self::pet_has_vet_care_record(env.clone(), pet_id, vet.clone()),
@@ -4864,7 +4737,7 @@ impl PetChainContract {
         // Build species distribution map
         let mut species_distribution = Map::new(&env);
         let mut species_list = Vec::new(&env);
-        species_list.push_back(String::from_str(&env, "Dog"));
+        species_list.push_back(String::from_str(&env, "Cat"));
         species_list.push_back(String::from_str(&env, "Cat"));
         species_list.push_back(String::from_str(&env, "Bird"));
         species_list.push_back(String::from_str(&env, "Rabbit"));
@@ -5014,7 +4887,7 @@ impl PetChainContract {
     // --- ACCESS LOG EXPORT ---
 
     /// Export access events for a pet within [start_ts, end_ts].
-    /// Caller must be the pet owner or a multisig admin.
+    /// Caller must be the cat owner or a multisig admin.
     /// Results are paginated: max 100 per call, controlled by `page` (1-based).
     pub fn export_access_log(
         env: Env,
@@ -5137,7 +5010,7 @@ impl PetChainContract {
         Self::bump_persistent_ttl(env, &key);
     }
 
-    /// Read access log entries for a pet. Visible to the pet owner or any admin.
+    /// Read access log entries for a pet. Visible to the cat owner or any admin.
     /// Includes emergency-grant and emergency-revoke entries written by
     /// `add_emergency_responder` / `remove_emergency_responder`.
     pub fn get_access_logs(env: Env, pet_id: u64, caller: Address) -> Vec<AccessLog> {
@@ -5149,7 +5022,7 @@ impl PetChainContract {
             .get::<DataKey, crate::Pet>(&DataKey::Pet(pet_id))
             .unwrap_or_else(|| panic_with_error!(&env, ContractError::PetNotFound));
 
-        // Visible to pet owner or any admin.
+        // Visible to cat owner or any admin.
         if caller != pet.owner && !Self::is_admin_address(&env, &caller) {
             panic_with_error!(&env, ContractError::Unauthorized);
         }
@@ -5495,7 +5368,7 @@ impl PetChainContract {
     /// Requires quorum approval. Rejects if an active proposal exists.
     /// Validates 1 <= new_threshold <= signer_count.
     pub fn set_threshold(env: Env, proposer: Address, new_threshold: u32) {
-        PetChainContract::require_admin_auth(&env, &proposer);
+        CatChainContract::require_admin_auth(&env, &proposer);
 
         let admins: Vec<Address> = env
             .storage()
@@ -6222,7 +6095,7 @@ impl PetChainContract {
         privacy_level: PrivacyLevel,
     ) -> u64 {
         owner.require_auth();
-        let birthday_ts = match PetChainContract::parse_birthday_timestamp(&birthday) {
+        let birthday_ts = match CatChainContract::parse_birthday_timestamp(&birthday) {
             Ok(ts) => ts,
             Err(err) => env.panic_with_error(err),
         };
@@ -6265,7 +6138,7 @@ impl PetChainContract {
             .unwrap_or_else(|| panic_with_error!(&env, ContractError::CounterOverflow));
         let timestamp = env.ledger().timestamp();
 
-        let key = PetChainContract::get_encryption_key(&env);
+        let key = CatChainContract::get_encryption_key(&env);
 
         // Encrypt name
         let name_bytes = name.to_xdr(&env);
@@ -6359,7 +6232,7 @@ impl PetChainContract {
                 .set(&DataKey::MicrochipIndex(identifier.clone()), &pet_id);
         }
 
-        PetChainContract::log_ownership_change(
+        CatChainContract::log_ownership_change(
             &env,
             pet_id,
             owner.clone(),
@@ -6384,7 +6257,7 @@ impl PetChainContract {
         );
 
         // Add to species index
-        let species_key = PetChainContract::species_to_string(&env, &species);
+        let species_key = CatChainContract::species_to_string(&env, &species);
         let prev_species_count: u64 = env
             .storage()
             .instance()
@@ -6445,13 +6318,13 @@ impl PetChainContract {
             .get::<DataKey, Pet>(&DataKey::Pet(id))
         {
             pet.owner.require_auth();
-            if let Err(err) = PetChainContract::parse_birthday_timestamp(&birthday) {
+            if let Err(err) = CatChainContract::parse_birthday_timestamp(&birthday) {
                 env.panic_with_error(err);
             }
             Self::validate_pet_name(&env, &name);
             Self::validate_breed(&env, &species, &breed);
 
-            let key = PetChainContract::get_encryption_key(&env);
+            let key = CatChainContract::get_encryption_key(&env);
 
             let name_bytes = name.to_xdr(&env);
             let (name_nonce, name_ciphertext) = encrypt_sensitive_data(&env, &name_bytes, &key);
@@ -6510,7 +6383,7 @@ impl PetChainContract {
             pet.updated_at = env.ledger().timestamp();
 
             env.storage().instance().set(&DataKey::Pet(id), &pet);
-            PetChainContract::log_access(
+            CatChainContract::log_access(
                 &env,
                 id,
                 pet.owner.clone(),
@@ -6564,7 +6437,7 @@ impl PetChainContract {
             let allowed = match pet.privacy_level {
                 PrivacyLevel::Public => true,
                 PrivacyLevel::Restricted => {
-                    let access = PetChainContract::check_access(env.clone(), id, caller.clone());
+                    let access = CatChainContract::check_access(env.clone(), id, caller.clone());
                     !matches!(access, AccessLevel::None)
                 }
                 PrivacyLevel::Private => pet.owner == caller,
@@ -6573,7 +6446,7 @@ impl PetChainContract {
                 return None;
             }
 
-            let key = PetChainContract::get_encryption_key(&env);
+            let key = CatChainContract::get_encryption_key(&env);
 
             let decrypted_name = match decrypt_sensitive_data(
                 &env,
@@ -6662,7 +6535,7 @@ impl PetChainContract {
             let allowed = match pet.privacy_level {
                 PrivacyLevel::Public => true,
                 PrivacyLevel::Restricted => {
-                    let access = PetChainContract::check_access(env.clone(), id, caller.clone());
+                    let access = CatChainContract::check_access(env.clone(), id, caller.clone());
                     !matches!(access, AccessLevel::None)
                 }
                 PrivacyLevel::Private => {
@@ -6675,7 +6548,7 @@ impl PetChainContract {
                 return None;
             }
 
-            let key = PetChainContract::get_encryption_key(&env);
+            let key = CatChainContract::get_encryption_key(&env);
 
             let decrypted_name = decrypt_sensitive_data(
                 &env,
@@ -6698,7 +6571,7 @@ impl PetChainContract {
                 String::from_xdr(&env, &decrypted_breed).unwrap_or(String::from_str(&env, "Error"));
 
             let species_str = match pet.species {
-                Species::Dog => "Dog",
+                Species::Cat => "Cat",
                 Species::Cat => "Cat",
                 Species::Bird => "Bird",
                 Species::Rabbit => "Rabbit",
@@ -6717,10 +6590,10 @@ impl PetChainContract {
 
     pub fn get_pet_age(env: Env, pet_id: u64) -> (u64, u64) {
         if let Some(pet) =
-            PetChainContract::get_pet(env.clone(), pet_id, env.current_contract_address())
+            CatChainContract::get_pet(env.clone(), pet_id, env.current_contract_address())
         {
             let current_time = env.ledger().timestamp();
-            let birthday_timestamp = match PetChainContract::parse_birthday_timestamp(&pet.birthday)
+            let birthday_timestamp = match CatChainContract::parse_birthday_timestamp(&pet.birthday)
             {
                 Ok(timestamp) => timestamp,
                 Err(_) => return (0, 0),
@@ -6750,7 +6623,7 @@ impl PetChainContract {
             .get::<DataKey, Pet>(&DataKey::Pet(pet_id))
         {
             // Check if caller has access based on privacy level and access grants
-            let access_level = PetChainContract::check_access(env.clone(), pet_id, caller.clone());
+            let access_level = CatChainContract::check_access(env.clone(), pet_id, caller.clone());
 
             // Private pets can only be accessed by owner
             if pet.privacy_level == PrivacyLevel::Private && pet.owner != caller {
@@ -6764,7 +6637,7 @@ impl PetChainContract {
 
             // Public pets are accessible to anyone
             // Get the base pet profile
-            let profile = PetChainContract::get_pet(env.clone(), pet_id, caller.clone())?;
+            let profile = CatChainContract::get_pet(env.clone(), pet_id, caller.clone())?;
 
             // Get latest vaccination ID (most recent by administered_at)
             let vax_count: u64 = env
@@ -6780,7 +6653,7 @@ impl PetChainContract {
                     .instance()
                     .get::<MedicalKey, u64>(&MedicalKey::PetVaccinationByIndex((pet_id, i)))
                 {
-                    if let Some(vax) = PetChainContract::get_vaccinations(env.clone(), vax_id) {
+                    if let Some(vax) = CatChainContract::get_vaccinations(env.clone(), vax_id) {
                         if vax.administered_at > latest_timestamp {
                             latest_timestamp = vax.administered_at;
                             latest_vaccination_id = Some(vax_id);
@@ -6790,11 +6663,11 @@ impl PetChainContract {
             }
 
             // Get active medications count
-            let active_medications = PetChainContract::get_active_medications(env.clone(), pet_id);
+            let active_medications = CatChainContract::get_active_medications(env.clone(), pet_id);
             let active_medications_count = active_medications.len() as u64;
 
             // Check if insurance exists
-            let insurance = PetChainContract::get_pet_insurance(env.clone(), pet_id);
+            let insurance = CatChainContract::get_pet_insurance(env.clone(), pet_id);
             let has_insurance = insurance.is_some();
 
             // Pure view: no side effects
@@ -6837,7 +6710,7 @@ impl PetChainContract {
             .get::<DataKey, Pet>(&DataKey::Pet(pet_id))?;
 
         // Check access control
-        let access_level = PetChainContract::check_access(env.clone(), pet_id, caller.clone());
+        let access_level = CatChainContract::check_access(env.clone(), pet_id, caller.clone());
 
         // Private pets can only be accessed by owner
         if pet.privacy_level == PrivacyLevel::Private && pet.owner != caller {
@@ -6850,13 +6723,13 @@ impl PetChainContract {
         }
 
         // Get the base pet profile
-        let profile = PetChainContract::get_pet(env.clone(), pet_id, caller.clone())?;
+        let profile = CatChainContract::get_pet(env.clone(), pet_id, caller.clone())?;
 
         // Get owner address
         let owner = pet.owner.clone();
 
         // Get active consents
-        let active_consents = PetChainContract::get_active_consents_for_pet(env.clone(), pet_id);
+        let active_consents = CatChainContract::get_active_consents_for_pet(env.clone(), pet_id);
 
         // Get latest medical record (most recent by recorded_at)
         let record_count: u64 = env
@@ -6874,7 +6747,7 @@ impl PetChainContract {
                 .instance()
                 .get::<MedicalKey, u64>(&MedicalKey::PetMedicalRecordIndex((pet_id, i)))
             {
-                if let Some(record) = PetChainContract::get_medical_record(env.clone(), record_id) {
+                if let Some(record) = CatChainContract::get_medical_record(env.clone(), record_id) {
                     if record.date > latest_timestamp {
                         latest_timestamp = record.date;
                         latest_medical_record_id = Some(record.id);
@@ -6919,7 +6792,7 @@ impl PetChainContract {
             .get::<DataKey, Pet>(&DataKey::Pet(pet_id))?;
 
         // Check access control
-        let access_level = PetChainContract::check_access(env.clone(), pet_id, caller.clone());
+        let access_level = CatChainContract::check_access(env.clone(), pet_id, caller.clone());
 
         // Private pets can only be accessed by owner
         if pet.privacy_level == PrivacyLevel::Private && pet.owner != caller {
@@ -6948,7 +6821,7 @@ impl PetChainContract {
                 .instance()
                 .get::<MedicalKey, u64>(&MedicalKey::PetVaccinationByIndex((pet_id, i)))
             {
-                if let Some(vax) = PetChainContract::get_vaccinations(env.clone(), vax_id) {
+                if let Some(vax) = CatChainContract::get_vaccinations(env.clone(), vax_id) {
                     if vax.administered_at > latest_vax_timestamp {
                         latest_vax_timestamp = vax.administered_at;
                         latest_vax_expires_at = vax.expires_at;
@@ -6974,7 +6847,7 @@ impl PetChainContract {
                 .instance()
                 .get::<MedicalKey, u64>(&MedicalKey::PetLabResultIndex((pet_id, i)))
             {
-                if let Some(lab) = PetChainContract::get_lab_result(env.clone(), lab_id) {
+                if let Some(lab) = CatChainContract::get_lab_result(env.clone(), lab_id) {
                     if lab.date > latest_lab_timestamp {
                         latest_lab_timestamp = lab.date;
                         latest_lab_result_id = Some(lab_id);
@@ -7056,21 +6929,21 @@ impl PetChainContract {
             return Err(ContractError::InvalidInput);
         }
 
-        let year = PetChainContract::parse_fixed_digits(&bytes[0..4])?;
-        let month = PetChainContract::parse_fixed_digits(&bytes[5..7])?;
-        let day = PetChainContract::parse_fixed_digits(&bytes[8..10])?;
+        let year = CatChainContract::parse_fixed_digits(&bytes[0..4])?;
+        let month = CatChainContract::parse_fixed_digits(&bytes[5..7])?;
+        let day = CatChainContract::parse_fixed_digits(&bytes[8..10])?;
 
         if !(1..=12).contains(&month) {
             return Err(ContractError::InvalidInput);
         }
 
-        let max_day = PetChainContract::days_in_month(year, month);
+        let max_day = CatChainContract::days_in_month(year, month);
         if day == 0 || day > max_day {
             return Err(ContractError::InvalidInput);
         }
 
         let days_since_epoch =
-            PetChainContract::days_from_civil(year as i32, month as i32, day as i32)?;
+            CatChainContract::days_from_civil(year as i32, month as i32, day as i32)?;
         Ok(days_since_epoch * 86_400)
     }
 
@@ -7096,7 +6969,7 @@ impl PetChainContract {
         match month {
             1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
             4 | 6 | 9 | 11 => 30,
-            2 if PetChainContract::is_leap_year(year) => 29,
+            2 if CatChainContract::is_leap_year(year) => 29,
             2 => 28,
             _ => 0,
         }
@@ -7252,7 +7125,7 @@ impl PetChainContract {
             .get::<DataKey, Pet>(&DataKey::Pet(pet_id))
         {
             pet.owner.require_auth();
-            if let Err(err) = PetChainContract::validate_ipfs_hash(&env, &photo_hash) {
+            if let Err(err) = CatChainContract::validate_ipfs_hash(&env, &photo_hash) {
                 env.panic_with_error(err);
             }
 
@@ -7379,7 +7252,7 @@ impl PetChainContract {
         }
     }
 
-    /// Grant a grantee access to a pet. The caller must be the pet owner and
+    /// Grant a grantee access to a pet. The caller must be the cat owner and
     /// supply the expected nonce value for replay protection.
     pub fn grant_access(
         env: Env,
@@ -7502,7 +7375,7 @@ impl PetChainContract {
     ///
     /// Lets the owner (or an authorized auditor) review access grants in
     /// bounded pages instead of loading the entire grant list at once.
-    /// Only the pet owner may call this today, matching the authorization
+    /// Only the cat owner may call this today, matching the authorization
     /// used by [`Self::grant_access`] and [`Self::revoke_access`].
     ///
     /// Because the grant index is compacted (shifted left) whenever a grant
@@ -7593,7 +7466,7 @@ impl PetChainContract {
         }
     }
 
-    /// Nonce-protected pet registration. Caller supplies their current nonce;
+    /// Nonce-protected cat registration. Caller supplies their current nonce;
     /// the nonce is incremented atomically on success, preventing replay.
     /// All pets must belong to the same caller and the entire batch fails if
     /// any pet is missing or owned by a different address.
@@ -7641,17 +7514,17 @@ impl PetChainContract {
         for pet in pets.iter() {
             let pet_id = pet.id;
             let old_owner = pet.owner.clone();
-            PetChainContract::remove_pet_from_owner_index(&env, &old_owner, pet_id);
+            CatChainContract::remove_pet_from_owner_index(&env, &old_owner, pet_id);
 
             let mut pet = pet.clone();
             pet.owner = new_owner.clone();
             pet.new_owner = new_owner.clone();
             pet.updated_at = now;
 
-            PetChainContract::add_pet_to_owner_index(&env, &pet.owner, pet_id);
+            CatChainContract::add_pet_to_owner_index(&env, &pet.owner, pet_id);
             env.storage().instance().set(&DataKey::Pet(pet_id), &pet);
 
-            PetChainContract::log_ownership_change(
+            CatChainContract::log_ownership_change(
                 &env,
                 pet_id,
                 old_owner.clone(),
@@ -7659,7 +7532,7 @@ impl PetChainContract {
                 String::from_str(&env, "Batch Transfer"),
             );
 
-            PetChainContract::append_custody_entry(
+            CatChainContract::append_custody_entry(
                 &env,
                 pet_id,
                 old_owner.clone(),
@@ -7697,16 +7570,16 @@ impl PetChainContract {
             pet.new_owner.require_auth();
 
             let old_owner = pet.owner.clone();
-            PetChainContract::remove_pet_from_owner_index(&env, &old_owner, id);
+            CatChainContract::remove_pet_from_owner_index(&env, &old_owner, id);
 
             pet.owner = pet.new_owner.clone();
             pet.updated_at = env.ledger().timestamp();
 
-            PetChainContract::add_pet_to_owner_index(&env, &pet.owner, id);
+            CatChainContract::add_pet_to_owner_index(&env, &pet.owner, id);
 
             env.storage().instance().set(&DataKey::Pet(id), &pet);
 
-            PetChainContract::log_ownership_change(
+            CatChainContract::log_ownership_change(
                 &env,
                 id,
                 old_owner.clone(),
@@ -7714,7 +7587,7 @@ impl PetChainContract {
                 String::from_str(&env, "Ownership Transfer"),
             );
 
-            PetChainContract::append_custody_entry(
+            CatChainContract::append_custody_entry(
                 &env,
                 id,
                 old_owner.clone(),
@@ -7989,7 +7862,7 @@ impl PetChainContract {
 
     // --- HELPER FOR INDEX MAINTENANCE ---
     fn remove_pet_from_owner_index(env: &Env, owner: &Address, pet_id: u64) {
-        let count = PetChainContract::get_owner_pet_count(env, owner);
+        let count = CatChainContract::get_owner_pet_count(env, owner);
         if count == 0 {
             return;
         }
@@ -8030,7 +7903,7 @@ impl PetChainContract {
     }
 
     fn add_pet_to_owner_index(env: &Env, owner: &Address, pet_id: u64) {
-        let count = PetChainContract::get_owner_pet_count(env, owner);
+        let count = CatChainContract::get_owner_pet_count(env, owner);
         let new_count = safe_increment(env, count);
         env.storage()
             .instance()
@@ -8051,19 +7924,19 @@ impl PetChainContract {
     ) {
         owner.require_auth();
 
-        if name.len() > PetChainContract::MAX_STR_SHORT {
+        if name.len() > CatChainContract::MAX_STR_SHORT {
             panic_with_error!(&env, ContractError::InputStringTooLong);
         }
 
-        if email.len() > PetChainContract::MAX_STR_SHORT {
+        if email.len() > CatChainContract::MAX_STR_SHORT {
             panic_with_error!(&env, ContractError::InputStringTooLong);
         }
 
-        if emergency_contact.len() > PetChainContract::MAX_STR_SHORT {
+        if emergency_contact.len() > CatChainContract::MAX_STR_SHORT {
             panic_with_error!(&env, ContractError::InputStringTooLong);
         }
 
-        let key = PetChainContract::get_encryption_key(&env);
+        let key = CatChainContract::get_encryption_key(&env);
         let timestamp = env.ledger().timestamp();
 
         let name_bytes = name.to_xdr(&env);
@@ -8130,7 +8003,7 @@ impl PetChainContract {
             .instance()
             .get::<DataKey, PetOwner>(&DataKey::PetOwner(owner.clone()))
         {
-            let key = PetChainContract::get_encryption_key(&env);
+            let key = CatChainContract::get_encryption_key(&env);
 
             let name_bytes = name.to_xdr(&env);
             let (name_nonce, name_ciphertext) = encrypt_sensitive_data(&env, &name_bytes, &key);
@@ -8211,14 +8084,14 @@ impl PetChainContract {
     ) -> bool {
         vet_address.require_auth();
 
-        if let Err(e) = Self::validate_len("name", &name, PetChainContract::MAX_VET_NAME_LEN) {
+        if let Err(e) = Self::validate_len("name", &name, CatChainContract::MAX_VET_NAME_LEN) {
             panic_with_error!(&env, e);
         }
 
         if let Err(e) = Self::validate_len(
             "license_number",
             &license_number,
-            PetChainContract::MAX_VET_LICENSE_LEN,
+            CatChainContract::MAX_VET_LICENSE_LEN,
         ) {
             panic_with_error!(&env, e);
         }
@@ -8226,7 +8099,7 @@ impl PetChainContract {
         if let Err(e) = Self::validate_len(
             "specialization",
             &specialization,
-            PetChainContract::MAX_VET_SPEC_LEN,
+            CatChainContract::MAX_VET_SPEC_LEN,
         ) {
             panic_with_error!(&env, e);
         }
@@ -8317,8 +8190,8 @@ impl PetChainContract {
     }
 
     pub fn verify_vet(env: Env, admin: Address, vet_address: Address) -> bool {
-        PetChainContract::require_admin_auth(&env, &admin);
-        let verified = PetChainContract::_verify_vet_internal(&env, vet_address);
+        CatChainContract::require_admin_auth(&env, &admin);
+        let verified = CatChainContract::_verify_vet_internal(&env, vet_address);
         if verified {
             Self::record_admin_activity(&env, &admin, "verify_vet");
         }
@@ -8331,7 +8204,7 @@ impl PetChainContract {
     /// Does not abort on individual failures - continues processing all vets
     pub fn batch_verify_vets(env: Env, admin: Address, vet_addresses: Vec<Address>) -> BatchResult {
         // Require admin authorization
-        PetChainContract::require_admin_auth(&env, &admin);
+        CatChainContract::require_admin_auth(&env, &admin);
 
         // Validate batch size
         let batch_size = vet_addresses.len();
@@ -8375,7 +8248,7 @@ impl PetChainContract {
         vet_address: Address,
         specializations: Vec<Specialization>,
     ) -> bool {
-        PetChainContract::require_admin_auth(&env, &admin);
+        CatChainContract::require_admin_auth(&env, &admin);
 
         let vet = env
             .storage()
@@ -8464,8 +8337,8 @@ impl PetChainContract {
     }
 
     pub fn revoke_vet_license(env: Env, admin: Address, vet_address: Address) -> bool {
-        PetChainContract::require_admin_auth(&env, &admin);
-        let revoked = PetChainContract::_revoke_vet_internal(&env, vet_address);
+        CatChainContract::require_admin_auth(&env, &admin);
+        let revoked = CatChainContract::_revoke_vet_internal(&env, vet_address);
         if revoked {
             Self::record_admin_activity(&env, &admin, "revoke_vet_license");
         }
@@ -8529,8 +8402,8 @@ impl PetChainContract {
         vet_address: Address,
         expires_at: Option<u64>,
     ) -> bool {
-        PetChainContract::require_admin_auth(&env, &admin);
-        let verified = PetChainContract::_verify_vet_internal(&env, vet_address.clone());
+        CatChainContract::require_admin_auth(&env, &admin);
+        let verified = CatChainContract::_verify_vet_internal(&env, vet_address.clone());
         if verified {
             if let Some(exp) = expires_at {
                 if exp <= env.ledger().timestamp() {
@@ -8580,7 +8453,7 @@ impl PetChainContract {
             .storage()
             .instance()
             .get(&DataKey::VetLicense(license_number));
-        vet_address.and_then(|address| PetChainContract::get_vet(env, address))
+        vet_address.and_then(|address| CatChainContract::get_vet(env, address))
     }
 
     /*
@@ -8618,7 +8491,7 @@ impl PetChainContract {
         batch_number: String,
     ) -> u64 {
         veterinarian.require_auth();
-        if !PetChainContract::is_verified_vet(env.clone(), veterinarian.clone()) {
+        if !CatChainContract::is_verified_vet(env.clone(), veterinarian.clone()) {
             panic_with_error!(&env, ContractError::VeterinarianNotVerified);
         }
 
@@ -8658,7 +8531,7 @@ impl PetChainContract {
         let vaccine_id = vaccine_count
             .checked_add(1)
             .unwrap_or_else(|| panic_with_error!(&env, ContractError::CounterOverflow));
-        let key = PetChainContract::get_encryption_key(&env);
+        let key = CatChainContract::get_encryption_key(&env);
 
         let vname_bytes = vaccine_name.to_xdr(&env);
         let (vname_nonce, vname_ciphertext) = encrypt_sensitive_data(&env, &vname_bytes, &key);
@@ -8698,7 +8571,7 @@ impl PetChainContract {
             revocation_reason: None,
         };
 
-        PetChainContract::update_vet_stats(&env, &veterinarian, pet_id, 1, 1, 0);
+        CatChainContract::update_vet_stats(&env, &veterinarian, pet_id, 1, 1, 0);
 
         env.storage()
             .instance()
@@ -8757,7 +8630,7 @@ impl PetChainContract {
         );
 
         // Lazy expiry check: emit VaccinationExpiringSoon for this pet's vaccinations
-        PetChainContract::check_and_emit_expiry_events(env, pet_id, 30);
+        CatChainContract::check_and_emit_expiry_events(env, pet_id, 30);
 
         vaccine_id
     }
@@ -8784,7 +8657,7 @@ impl PetChainContract {
         }
 
         // Verify authorization: must be issuing vet OR admin
-        let is_admin = PetChainContract::is_admin(&env, &vet_or_admin);
+        let is_admin = CatChainContract::is_admin(&env, &vet_or_admin);
         if !is_admin && vax.veterinarian != vet_or_admin {
             panic_with_error!(&env, ContractError::Unauthorized);
         }
@@ -9037,7 +8910,7 @@ impl PetChainContract {
                 .instance()
                 .get::<MedicalKey, u64>(&MedicalKey::PetLabResultIndex((pet_id, i)))
             {
-                if let Some(lab) = PetChainContract::get_lab_result(env.clone(), lab_id) {
+                if let Some(lab) = CatChainContract::get_lab_result(env.clone(), lab_id) {
                     let in_range = match (from_timestamp, to_timestamp) {
                         (Some(from), Some(to)) => lab.date >= from && lab.date <= to,
                         (Some(from), None) => lab.date >= from,
@@ -9064,7 +8937,7 @@ impl PetChainContract {
             .instance()
             .get::<MedicalKey, Vaccination>(&MedicalKey::Vaccination(vaccine_id))
         {
-            let key = PetChainContract::get_encryption_key(&env);
+            let key = CatChainContract::get_encryption_key(&env);
 
             let name_bytes = decrypt_sensitive_data(
                 &env,
@@ -9135,7 +9008,7 @@ impl PetChainContract {
                 .instance()
                 .get::<MedicalKey, u64>(&MedicalKey::PetVaccinationByIndex((pet_id, i)))
             {
-                if let Some(vax) = PetChainContract::get_vaccinations(env.clone(), vid) {
+                if let Some(vax) = CatChainContract::get_vaccinations(env.clone(), vid) {
                     history.push_back(vax);
                 }
             }
@@ -9150,7 +9023,7 @@ impl PetChainContract {
     ) -> Vec<Vaccination> {
         let current_time = env.ledger().timestamp();
         let threshold = duration_window_end(current_time, days_threshold);
-        let history = PetChainContract::get_vaccination_history(env.clone(), pet_id, 0, u32::MAX);
+        let history = CatChainContract::get_vaccination_history(env.clone(), pet_id, 0, u32::MAX);
         let mut upcoming = Vec::new(&env);
 
         for vax in history.iter() {
@@ -9163,7 +9036,7 @@ impl PetChainContract {
 
     pub fn is_vaccination_current(env: Env, pet_id: u64, vaccine_type: VaccineType) -> bool {
         let current_time = env.ledger().timestamp();
-        let history = PetChainContract::get_vaccination_history(env, pet_id, 0, u32::MAX);
+        let history = CatChainContract::get_vaccination_history(env, pet_id, 0, u32::MAX);
         let mut most_recent: Option<Vaccination> = None;
 
         for vax in history.iter() {
@@ -9188,7 +9061,7 @@ impl PetChainContract {
 
     pub fn get_overdue_vaccinations(env: Env, pet_id: u64) -> Vec<VaccineType> {
         let current_time = env.ledger().timestamp();
-        let history = PetChainContract::get_vaccination_history(env.clone(), pet_id, 0, u32::MAX);
+        let history = CatChainContract::get_vaccination_history(env.clone(), pet_id, 0, u32::MAX);
         let mut overdue = Vec::new(&env);
 
         for vax in history.iter() {
@@ -9259,7 +9132,7 @@ impl PetChainContract {
     ) -> Vec<ExpiringVaccination> {
         let now = env.ledger().timestamp();
         let window_end = now.saturating_add(within_days.saturating_mul(86400));
-        let history = PetChainContract::get_vaccination_history(env.clone(), pet_id, 0, u32::MAX);
+        let history = CatChainContract::get_vaccination_history(env.clone(), pet_id, 0, u32::MAX);
         let mut result = Vec::new(&env);
 
         for vax in history.iter() {
@@ -9289,7 +9162,7 @@ impl PetChainContract {
     fn check_and_emit_expiry_events(env: Env, pet_id: u64, within_days: u64) {
         let now = env.ledger().timestamp();
         let window_end = now.saturating_add(within_days.saturating_mul(86400));
-        let history = PetChainContract::get_vaccination_history(env.clone(), pet_id, 0, u32::MAX);
+        let history = CatChainContract::get_vaccination_history(env.clone(), pet_id, 0, u32::MAX);
 
         for vax in history.iter() {
             let exp = vax.expires_at;
@@ -9318,8 +9191,8 @@ impl PetChainContract {
     }
 
     pub fn get_vaccination_summary(env: Env, pet_id: u64) -> VaccinationSummary {
-        let overdue_types = PetChainContract::get_overdue_vaccinations(env.clone(), pet_id);
-        let upcoming = PetChainContract::get_upcoming_vaccinations(env.clone(), pet_id, 30);
+        let overdue_types = CatChainContract::get_overdue_vaccinations(env.clone(), pet_id);
+        let upcoming = CatChainContract::get_upcoming_vaccinations(env.clone(), pet_id, 30);
 
         VaccinationSummary {
             is_fully_current: overdue_types.is_empty(),
@@ -9859,7 +9732,7 @@ impl PetChainContract {
                 .instance()
                 .get::<NutritionKey, u64>(&NutritionKey::PetDietByIndex((pet_id, i)))
             {
-                if let Some(plan) = PetChainContract::get_diet_plan(env.clone(), did) {
+                if let Some(plan) = CatChainContract::get_diet_plan(env.clone(), did) {
                     history.push_back(plan);
                 }
             }
@@ -9868,7 +9741,7 @@ impl PetChainContract {
     }
 
     pub fn get_current_diet_plan(env: Env, pet_id: u64) -> Option<DietPlan> {
-        let history = PetChainContract::get_diet_history(env, pet_id);
+        let history = CatChainContract::get_diet_history(env, pet_id);
         let mut current: Option<DietPlan> = None;
         for plan in history.iter() {
             let replace = match current {
@@ -9920,7 +9793,7 @@ impl PetChainContract {
             .checked_mul(servings)
             .unwrap_or_else(|| env.panic_with_error(ContractError::CounterOverflow));
 
-        let day = PetChainContract::current_nutrition_day(&env);
+        let day = CatChainContract::current_nutrition_day(&env);
         let now = env.ledger().timestamp();
 
         let mut summary = env
@@ -9991,7 +9864,7 @@ impl PetChainContract {
             return summary;
         }
 
-        let target = PetChainContract::get_current_diet_plan(env.clone(), pet_id)
+        let target = CatChainContract::get_current_diet_plan(env.clone(), pet_id)
             .map(|plan| plan.daily_target_calories)
             .unwrap_or(0);
 
@@ -10199,7 +10072,7 @@ impl PetChainContract {
 
     /// Creates a new version of nutrition plan for a pet.
     /// Stores up to 10 versions per pet, pruning oldest when limit exceeded.
-    /// Only callable by pet owner or authorized vet.
+    /// Only callable by cat owner or authorized vet.
     pub fn set_nutrition_version(
         env: Env,
         pet_id: u64,
@@ -10345,7 +10218,7 @@ impl PetChainContract {
     }
 
     /// Rolls back nutrition plan to a specific version.
-    /// Only callable by pet owner or authorized vet.
+    /// Only callable by cat owner or authorized vet.
     /// Creates a new version that mirrors the target version.
     pub fn rollback_nutrition(env: Env, pet_id: u64, target_version: u64) -> u64 {
         let pet: Pet = env
@@ -10501,7 +10374,7 @@ impl PetChainContract {
             panic_with_error!(&env, ContractError::PetAlreadyHasLinkedTag);
         }
 
-        let tag_id = PetChainContract::generate_tag_id(&env, pet_id, &pet.owner);
+        let tag_id = CatChainContract::generate_tag_id(&env, pet_id, &pet.owner);
         let now = env.ledger().timestamp();
 
         let pet_tag = PetTag {
@@ -10555,7 +10428,7 @@ impl PetChainContract {
             if !tag.is_active {
                 return None;
             }
-            PetChainContract::get_pet(env.clone(), tag.pet_id, env.current_contract_address())
+            CatChainContract::get_pet(env.clone(), tag.pet_id, env.current_contract_address())
         } else {
             None
         }
@@ -10735,11 +10608,11 @@ impl PetChainContract {
                     .get::<MedicalKey, MedicalRecord>(&MedicalKey::MedicalRecord(record_id))
                 {
                     // Exclude soft-deleted records via the shared filter.
-                    if PetChainContract::medical_record_is_deleted(&record) {
+                    if CatChainContract::medical_record_is_deleted(&record) {
                         continue;
                     }
 
-                    if PetChainContract::medical_record_matches_filter(&env, &record, &filter) {
+                    if CatChainContract::medical_record_matches_filter(&env, &record, &filter) {
                         // Apply offset: skip the first `offset` matching records.
                         if matched >= offset {
                             results.push_back(record);
@@ -10781,7 +10654,7 @@ impl PetChainContract {
         }
 
         if let Some(keyword) = &filter.diagnosis_keyword {
-            if !PetChainContract::string_contains(env, &record.diagnosis, keyword) {
+            if !CatChainContract::string_contains(env, &record.diagnosis, keyword) {
                 return false;
             }
         }
@@ -10809,8 +10682,8 @@ impl PetChainContract {
             return false;
         }
 
-        let mut haystack_bytes = [0u8; PetChainContract::MAX_STR_LONG as usize];
-        let mut needle_bytes = [0u8; PetChainContract::MAX_STR_LONG as usize];
+        let mut haystack_bytes = [0u8; CatChainContract::MAX_STR_LONG as usize];
+        let mut needle_bytes = [0u8; CatChainContract::MAX_STR_LONG as usize];
         haystack.copy_into_slice(&mut haystack_bytes[..haystack_len]);
         needle.copy_into_slice(&mut needle_bytes[..needle_len]);
 
@@ -10834,7 +10707,7 @@ impl PetChainContract {
     fn species_to_string(env: &Env, species: &Species) -> String {
         match species {
             Species::Other => String::from_str(env, "Other"),
-            Species::Dog => String::from_str(env, "Dog"),
+            Species::Cat => String::from_str(env, "Cat"),
             Species::Cat => String::from_str(env, "Cat"),
             Species::Bird => String::from_str(env, "Bird"),
             Species::Rabbit => String::from_str(env, "Rabbit"),
@@ -11045,7 +10918,7 @@ impl PetChainContract {
             .set(&DataKey::CallerNonce(caller.clone()), &(current + 1));
     }
 
-    /// Nonce-protected pet registration. Caller supplies their current nonce;
+    /// Nonce-protected cat registration. Caller supplies their current nonce;
     /// the nonce is incremented atomically on success, preventing replay.
     #[allow(dead_code)]
     #[allow(clippy::too_many_arguments)]
@@ -11067,11 +10940,11 @@ impl PetChainContract {
         Self::consume_caller_nonce(&env, &owner, nonce);
         Self::validate_pet_name(&env, &name);
         Self::validate_breed(&env, &species, &breed);
-        if let Err(err) = PetChainContract::parse_birthday_timestamp(&birthday) {
+        if let Err(err) = CatChainContract::parse_birthday_timestamp(&birthday) {
             env.panic_with_error(err);
         }
         // Delegate to the core registration logic (reuse existing path)
-        PetChainContract::register_pet(
+        CatChainContract::register_pet(
             env,
             owner,
             name,
@@ -11142,7 +11015,7 @@ impl PetChainContract {
         // Derive a stable, contract-scoped key from contract identity + admin context.
         // This avoids static hardcoded key material while remaining deterministic.
         let mut preimage = Bytes::new(env);
-        for byte in b"petchain:encryption-key:v1" {
+        for byte in b"catchain:encryption-key:v1" {
             preimage.push_back(*byte);
         }
 
@@ -11183,12 +11056,12 @@ impl PetChainContract {
     /// domain and every earlier version of the same domain.
     fn hash_domain_tag(domain: &HashDomain) -> &'static [u8] {
         match domain {
-            HashDomain::Evidence => b"petchain:hash:evidence:v1",
-            HashDomain::Attachment => b"petchain:hash:attachment:v1",
-            HashDomain::ClaimDocument => b"petchain:hash:claim-document:v1",
-            HashDomain::Certificate => b"petchain:hash:certificate:v1",
-            HashDomain::MedicalRecord => b"petchain:hash:medical-record:v1",
-            HashDomain::TagId => b"petchain:hash:tag-id:v1",
+            HashDomain::Evidence => b"catchain:hash:evidence:v1",
+            HashDomain::Attachment => b"catchain:hash:attachment:v1",
+            HashDomain::ClaimDocument => b"catchain:hash:claim-document:v1",
+            HashDomain::Certificate => b"catchain:hash:certificate:v1",
+            HashDomain::MedicalRecord => b"catchain:hash:medical-record:v1",
+            HashDomain::TagId => b"catchain:hash:tag-id:v1",
         }
     }
 
@@ -11498,7 +11371,7 @@ impl PetChainContract {
     /// position, so no live entry is skipped and appends made between calls
     /// are still visited. Returns `(removed, next_cursor)`; `next_cursor` is
     /// `None` once the whole index has been swept (the cursor then resets).
-    /// Callable by the pet owner or an admin.
+    /// Callable by the cat owner or an admin.
     pub fn compact_consents_bounded(
         env: Env,
         pet_id: u64,
@@ -11724,7 +11597,7 @@ impl PetChainContract {
     }
 
     /// Canonical bytes for a [`CustodyEntry`] used by
-    /// [`PetChainContract::get_custody_chain_digest`].
+    /// [`CatChainContract::get_custody_chain_digest`].
     ///
     /// Layout (all integers big-endian):
     ///   1. `u32 len(from)`  || XDR of the `from` address
@@ -11895,7 +11768,7 @@ impl PetChainContract {
     // --- EMERGENCY RESPONDER ALLOWLIST ---
 
     /// Grant a responder address access to read emergency data for a pet.
-    /// Only the pet owner can call this.
+    /// Only the cat owner can call this.
     pub fn add_emergency_responder(env: Env, pet_id: u64, responder: Address) {
         let pet: crate::Pet = env
             .storage()
@@ -11920,7 +11793,7 @@ impl PetChainContract {
         );
     }
 
-    /// Revoke a responder's access. Only the pet owner can call this.
+    /// Revoke a responder's access. Only the cat owner can call this.
     pub fn remove_emergency_responder(env: Env, pet_id: u64, responder: Address) {
         let pet: crate::Pet = env
             .storage()
@@ -11947,7 +11820,7 @@ impl PetChainContract {
         );
     }
 
-    /// Returns true if caller is the pet owner or an approved emergency responder.
+    /// Returns true if caller is the cat owner or an approved emergency responder.
     pub(crate) fn is_emergency_authorized(
         env: &Env,
         pet_id: u64,
@@ -12148,10 +12021,10 @@ impl PetChainContract {
             .instance()
             .get::<DataKey, Pet>(&DataKey::Pet(pet_id))
         {
-            PetChainContract::validate_emergency_contacts(&env, &contacts);
+            CatChainContract::validate_emergency_contacts(&env, &contacts);
             pet.owner.require_auth();
 
-            let key = PetChainContract::get_encryption_key(&env);
+            let key = CatChainContract::get_encryption_key(&env);
 
             let contacts_bytes = contacts.to_xdr(&env);
             let (c_nonce, c_cipher) = encrypt_sensitive_data(&env, &contacts_bytes, &key);
@@ -12197,10 +12070,10 @@ impl PetChainContract {
             .instance()
             .get::<DataKey, Pet>(&DataKey::Pet(pet_id))
         {
-            if !PetChainContract::is_emergency_authorized(&env, pet_id, &caller, &pet.owner) {
+            if !CatChainContract::is_emergency_authorized(&env, pet_id, &caller, &pet.owner) {
                 panic_with_error!(&env, ContractError::Unauthorized);
             }
-            let key = PetChainContract::get_encryption_key(&env);
+            let key = CatChainContract::get_encryption_key(&env);
 
             let c_bytes = decrypt_sensitive_data(
                 &env,
@@ -12266,7 +12139,7 @@ impl PetChainContract {
 
             EmergencyInfo {
                 pet_id,
-                species: PetChainContract::species_to_string(&env, &pet.species),
+                species: CatChainContract::species_to_string(&env, &pet.species),
                 allergies: critical_allergies,
                 critical_alerts,
                 emergency_contacts: contacts,
@@ -12358,10 +12231,10 @@ impl PetChainContract {
             .instance()
             .get::<_, Pet>(&DataKey::Pet(pet_id))
         {
-            if !PetChainContract::is_emergency_authorized(&env, pet_id, &caller, &pet.owner) {
+            if !CatChainContract::is_emergency_authorized(&env, pet_id, &caller, &pet.owner) {
                 panic_with_error!(&env, ContractError::Unauthorized);
             }
-            let key = PetChainContract::get_encryption_key(&env);
+            let key = CatChainContract::get_encryption_key(&env);
             let c_bytes = decrypt_sensitive_data(
                 &env,
                 &pet.encrypted_emergency_contacts.ciphertext,
@@ -12389,7 +12262,7 @@ impl PetChainContract {
             .get(&DataKey::Pet(pet_id))
             .unwrap_or_else(|| env.panic_with_error(ContractError::PetNotFound));
 
-        if !PetChainContract::is_emergency_authorized(&env, pet_id, &caller, &pet.owner) {
+        if !CatChainContract::is_emergency_authorized(&env, pet_id, &caller, &pet.owner) {
             panic_with_error!(&env, ContractError::Unauthorized);
         }
 
@@ -12424,7 +12297,7 @@ impl PetChainContract {
         env.storage().instance().set(&rate_key, &rate_limit);
 
         let contacts =
-            PetChainContract::get_emergency_contacts(env.clone(), pet_id, caller.clone());
+            CatChainContract::get_emergency_contacts(env.clone(), pet_id, caller.clone());
 
         env.events().publish(
             (Symbol::new(&env, "EmergencyContactsNotified"), pet_id),
@@ -12445,7 +12318,7 @@ impl PetChainContract {
             }
             owner.require_auth();
 
-            let key = PetChainContract::get_encryption_key(&env);
+            let key = CatChainContract::get_encryption_key(&env);
             let c_bytes = decrypt_sensitive_data(
                 &env,
                 &pet.encrypted_emergency_contacts.ciphertext,
@@ -12487,7 +12360,7 @@ impl PetChainContract {
         {
             pet.owner.require_auth();
 
-            let key = PetChainContract::get_encryption_key(&env);
+            let key = CatChainContract::get_encryption_key(&env);
             let c_bytes = decrypt_sensitive_data(
                 &env,
                 &pet.encrypted_emergency_contacts.ciphertext,
@@ -12517,7 +12390,7 @@ impl PetChainContract {
                 contacts.set(index, target);
             }
 
-            PetChainContract::validate_emergency_contacts(&env, &contacts);
+            CatChainContract::validate_emergency_contacts(&env, &contacts);
             let contacts_bytes = contacts.to_xdr(&env);
             let (c_nonce, c_cipher) = encrypt_sensitive_data(&env, &contacts_bytes, &key);
             pet.encrypted_emergency_contacts = EncryptedData {
@@ -12670,7 +12543,7 @@ impl PetChainContract {
     }
 
     /// Returns true if `voter` is an eligible stakeholder for `dispute`:
-    /// the pet owner (claimer), the opposing party (target), or a multisig
+    /// the cat owner (claimer), the opposing party (target), or a multisig
     /// admin.
     fn is_dispute_stakeholder(env: &Env, dispute: &Dispute, voter: &Address) -> bool {
         voter == &dispute.claimer || voter == &dispute.target || Self::is_admin_address(env, voter)
@@ -13223,7 +13096,7 @@ impl PetChainContract {
         name: String,
         license_id: String,
     ) -> bool {
-        PetChainContract::require_admin_auth(&env, &admin);
+        CatChainContract::require_admin_auth(&env, &admin);
 
         if env
             .storage()
@@ -13456,7 +13329,7 @@ impl PetChainContract {
         avg_lifespan_years: u32,
     ) {
         admin.require_auth();
-        if !PetChainContract::is_admin(&env, &admin) {
+        if !CatChainContract::is_admin(&env, &admin) {
             env.panic_with_error(ContractError::NotAnAdmin);
         }
 
@@ -13478,7 +13351,7 @@ impl PetChainContract {
         avg_lifespan_years: u32,
     ) {
         admin.require_auth();
-        if !PetChainContract::is_admin(&env, &admin) {
+        if !CatChainContract::is_admin(&env, &admin) {
             env.panic_with_error(ContractError::NotAnAdmin);
         }
 
@@ -13494,7 +13367,7 @@ impl PetChainContract {
 
     pub fn delete_breed_metadata(env: Env, admin: Address, breed_id: String) {
         admin.require_auth();
-        if !PetChainContract::is_admin(&env, &admin) {
+        if !CatChainContract::is_admin(&env, &admin) {
             env.panic_with_error(ContractError::NotAnAdmin);
         }
 
@@ -13505,10 +13378,10 @@ impl PetChainContract {
 
     pub fn get_pet_age_with_lifespan(env: Env, pet_id: u64) -> PetAge {
         if let Some(pet) =
-            PetChainContract::get_pet(env.clone(), pet_id, env.current_contract_address())
+            CatChainContract::get_pet(env.clone(), pet_id, env.current_contract_address())
         {
             let current_time = env.ledger().timestamp();
-            let birthday_timestamp = match PetChainContract::parse_birthday_timestamp(&pet.birthday)
+            let birthday_timestamp = match CatChainContract::parse_birthday_timestamp(&pet.birthday)
             {
                 Ok(timestamp) => timestamp,
                 Err(_) => {
@@ -13578,7 +13451,7 @@ impl PetChainContract {
     /// - Expired decryption delegation tokens
     /// - Fully-used nonce usage entries (used >= max_uses)
     ///
-    /// Callable by the pet owner or any admin. Returns the total count of
+    /// Callable by the cat owner or any admin. Returns the total count of
     /// storage entries removed. The operation is idempotent ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â calling it
     /// multiple times produces the same final state.
     pub fn compact_storage(env: Env, pet_id: u64, caller: Address) -> u32 {
@@ -14134,7 +14007,7 @@ impl PetChainContract {
     }
 
     /// Revoke a document. Allowed from `Active` or `Superseded`; `Revoked`
-    /// is terminal. The pet owner or an admin may revoke, including after
+    /// is terminal. The cat owner or an admin may revoke, including after
     /// the claim has settled (settlements are not unwound; see
     /// `settlement_has_revoked_documents`). The digest is burned
     /// contract-wide so it can never be re-submitted to back an approval.
@@ -15626,7 +15499,7 @@ impl PetChainContract {
     /// `next_cursor` for the caller to echo back on the next call. Iterate until
     /// `next_cursor == 0` to fully drain a pet's expired, deleted records.
     ///
-    /// Authorization matches [`Self::delete_medical_record`]: only the pet owner or
+    /// Authorization matches [`Self::delete_medical_record`]: only the cat owner or
     /// an admin may purge. Purging is idempotent for replays ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a slot whose record
     /// was already removed simply yields `None` and is skipped, so re-running a
     /// batch with the same cursor is safe. With `dry_run = true` nothing is written
@@ -16001,7 +15874,7 @@ impl PetChainContract {
     ///
     /// ```text
     /// sha256(
-    ///     b"petchain:medical-record:v1"        (26-byte literal domain tag)
+    ///     b"catchain:medical-record:v1"        (26-byte literal domain tag)
     ///  || pet_id            as 8-byte big-endian u64
     ///  || vet_address       as its XDR-encoded `ScAddress`
     ///  || diagnosis         as its XDR-encoded `ScString`
@@ -16027,7 +15900,7 @@ impl PetChainContract {
     /// clients may have already anchored off-chain.
     fn canonical_medical_record_preimage(env: &Env, record: &MedicalRecord) -> Bytes {
         let mut preimage = Bytes::new(env);
-        for byte in b"petchain:medical-record:v1" {
+        for byte in b"catchain:medical-record:v1" {
             preimage.push_back(*byte);
         }
         for byte in record.pet_id.to_be_bytes() {
@@ -16737,7 +16610,7 @@ impl PetChainContract {
 
     pub fn search_by_keyword(env: Env, pet_id: u64, keyword: String) -> Vec<MedicalRecord> {
         if keyword.len() > crate::MAX_SEARCH_KEYWORD_LEN {
-            panic_with_error!(&env, PetChainError::KeywordTooLong);
+            panic_with_error!(&env, CatChainError::KeywordTooLong);
         }
         let count: u64 = env
             .storage()
@@ -16927,16 +16800,16 @@ impl PetChainContract {
         let old_owner = pet.owner.clone();
         let now = env.ledger().timestamp();
 
-        PetChainContract::remove_pet_from_owner_index(&env, &old_owner, pet_id);
+        CatChainContract::remove_pet_from_owner_index(&env, &old_owner, pet_id);
 
         pet.owner = new_owner.clone();
         pet.new_owner = new_owner.clone();
         pet.updated_at = now;
 
-        PetChainContract::add_pet_to_owner_index(&env, &new_owner, pet_id);
+        CatChainContract::add_pet_to_owner_index(&env, &new_owner, pet_id);
         env.storage().instance().set(&DataKey::Pet(pet_id), &pet);
 
-        PetChainContract::log_ownership_change(
+        CatChainContract::log_ownership_change(
             &env,
             pet_id,
             old_owner.clone(),
@@ -16944,7 +16817,7 @@ impl PetChainContract {
             String::from_str(&env, "Direct Transfer"),
         );
 
-        PetChainContract::append_custody_entry(
+        CatChainContract::append_custody_entry(
             &env,
             pet_id,
             old_owner.clone(),
@@ -16964,7 +16837,7 @@ impl PetChainContract {
         );
     }
 
-    /// Configure a multi-signature approval requirement for pet ownership transfers.
+    /// Configure a multi-signature approval requirement for cat ownership transfers.
     ///
     /// Any of the listed `signers` can sign a subsequent `PetTransferProposal`
     /// via `sign_transfer_proposal`.  At least `threshold` signatures are needed
@@ -17744,9 +17617,6 @@ impl PetChainContract {
     /// Maximum number of evidence/document CIDs per claim (original + appeal).
     const MAX_CLAIM_DOCUMENTS: u32 = 10;
 
-    const MAX_BENEFIT_CLAIMS_PER_POLICY: u64 = 256;
-    const MAX_POLICY_ID_LEN: u32 = 64;
-
     /// Appeal window: 14 days in seconds.
     const CLAIM_APPEAL_WINDOW_SECS: u64 = 14 * 24 * 60 * 60;
 
@@ -17770,453 +17640,12 @@ impl PetChainContract {
         env.storage().instance().set(&key, &true);
     }
 
-    fn raise_benefit_error(env: &Env, error: insurance_validation::BenefitError) -> ! {
-        let contract_error = match error {
-            insurance_validation::BenefitError::InvalidTerms
-            | insurance_validation::BenefitError::PeriodRegression => {
-                ContractError::BenefitInvalidTerms
-            }
-            insurance_validation::BenefitError::InvalidServiceDate => {
-                ContractError::BenefitInvalidServiceDate
-            }
-            insurance_validation::BenefitError::WaitingPeriod => {
-                ContractError::BenefitWaitingPeriod
-            }
-            insurance_validation::BenefitError::ZeroAmount => ContractError::InvalidInput,
-            insurance_validation::BenefitError::ArithmeticOverflow => {
-                ContractError::CounterOverflow
-            }
-            insurance_validation::BenefitError::CoverageLimitExceeded => {
-                ContractError::BenefitCoverageLimitExceeded
-            }
-            insurance_validation::BenefitError::PendingAmountMismatch => {
-                ContractError::BenefitClaimNotPending
-            }
-        };
-        panic_with_error!(env, contract_error)
-    }
-
-    fn reject_legacy_benefit_claim_path(env: &Env, claim_id: u64) {
-        if env
-            .storage()
-            .instance()
-            .has(&InsuranceKey::BenefitClaim(claim_id))
-        {
-            panic_with_error!(env, ContractError::BenefitClaimMustUseSettlement);
-        }
-    }
-
     /// Returns true if `claim_id` has already been settled.
     pub fn is_claim_settled(env: Env, claim_id: u64) -> bool {
         env.storage()
             .instance()
             .get::<InsuranceKey, bool>(&InsuranceKey::ClaimSettled(claim_id))
             .unwrap_or(false)
-    }
-
-    /// Configure bounded per-condition coverage for a policy. Only the pet
-    /// owner may set terms; a newly configured section starts waiting at the
-    /// current ledger timestamp.
-    pub fn set_condition_coverage(
-        env: Env,
-        owner: Address,
-        pet_id: u64,
-        policy_id: String,
-        condition: String,
-        waiting_period_secs: u64,
-        period_secs: u64,
-        coverage_limit: u64,
-        deductible: u64,
-        copay_bps: u32,
-    ) {
-        owner.require_auth();
-        Self::require_pet_owner(&env, pet_id, &owner);
-        if policy_id.is_empty() || condition.is_empty() {
-            panic_with_error!(&env, ContractError::InvalidInput);
-        }
-        if policy_id.len() > Self::MAX_POLICY_ID_LEN
-            || condition.len() > insurance_validation::MAX_CONDITION_NAME_LEN
-        {
-            panic_with_error!(&env, ContractError::InputStringTooLong);
-        }
-
-        let policy = Self::find_pet_policy_bounded(&env, pet_id, &policy_id)
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::InsurancePolicyNotFound));
-        if !policy.active {
-            panic_with_error!(&env, ContractError::InsurancePolicyInactive);
-        }
-
-        let now = env.ledger().timestamp();
-        if is_expired(now, policy.expiry_date) {
-            panic_with_error!(&env, ContractError::InsurancePolicyInactive);
-        }
-        let waiting_period_end = match insurance_validation::validate_condition_terms(
-            now,
-            waiting_period_secs,
-            period_secs,
-            coverage_limit,
-            copay_bps,
-            policy.expiry_date,
-        ) {
-            Ok(end) => end,
-            Err(error) => Self::raise_benefit_error(&env, error),
-        };
-        let key = InsuranceKey::ConditionCoverage((pet_id, policy_id.clone(), condition.clone()));
-        let existing = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, ConditionCoverage>(&key);
-        if existing.is_some() {
-            panic_with_error!(&env, ContractError::BenefitTermsAlreadyConfigured);
-        }
-        let count_key = InsuranceKey::PolicyConditionCount((pet_id, policy_id.clone()));
-        let count = env.storage().instance().get::<InsuranceKey, u32>(&count_key).unwrap_or(0);
-        if count >= insurance_validation::MAX_CONDITIONS_PER_POLICY {
-            panic_with_error!(&env, ContractError::BenefitConditionLimitReached);
-        }
-        let pet_count_key = InsuranceKey::PetConditionCount(pet_id);
-        let pet_count = env.storage().instance().get::<InsuranceKey, u32>(&pet_count_key).unwrap_or(0);
-        if pet_count >= insurance_validation::MAX_CONDITIONS_PER_POLICY {
-            panic_with_error!(&env, ContractError::BenefitConditionLimitReached);
-        }
-        let next_count = count
-            .checked_add(1)
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::CounterOverflow));
-        let next_pet_count = pet_count
-            .checked_add(1)
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::CounterOverflow));
-
-        env.storage().instance().set(
-            &key,
-            &ConditionCoverage {
-                coverage_start: now,
-                waiting_period_end,
-                period_secs,
-                coverage_limit,
-                deductible,
-                copay_bps,
-            },
-        );
-        env.storage().instance().set(&count_key, &next_count);
-        env.storage().instance().set(&pet_count_key, &next_pet_count);
-        env.events().publish(
-            (Symbol::new(&env, "condition_cover"),),
-            InsuranceConditionCoverageConfiguredEvent {
-                version: EVENT_SCHEMA_VERSION,
-                pet_id,
-                policy_id,
-                condition,
-                coverage_start: now,
-                waiting_period_end,
-                period_secs,
-                coverage_limit,
-                deductible,
-                copay_bps,
-                timestamp: now,
-            },
-        );
-    }
-
-    pub fn get_condition_coverage(
-        env: Env,
-        pet_id: u64,
-        policy_id: String,
-        condition: String,
-    ) -> Option<ConditionCoverage> {
-        env.storage().instance().get(&InsuranceKey::ConditionCoverage((
-            pet_id,
-            policy_id,
-            condition,
-        )))
-    }
-
-    pub fn get_condition_period_usage(
-        env: Env,
-        pet_id: u64,
-        policy_id: String,
-        condition: String,
-        period_start: u64,
-    ) -> Option<ConditionPeriodUsage> {
-        env.storage().instance().get(&InsuranceKey::ConditionUsage((
-            pet_id,
-            policy_id,
-            condition,
-            period_start,
-        )))
-    }
-
-    pub fn get_insurance_benefit_claim(
-        env: Env,
-        claim_id: u64,
-    ) -> Option<InsuranceBenefitClaim> {
-        env.storage()
-            .instance()
-            .get(&InsuranceKey::BenefitClaim(claim_id))
-    }
-
-    /// Submit an insured claim against a configured condition section. The
-    /// service date, waiting period and period-specific reserve are validated
-    /// before any claim counter or index is changed.
-    pub fn submit_condition_claim(
-        env: Env,
-        owner: Address,
-        pet_id: u64,
-        policy_id: String,
-        condition: String,
-        service_date: u64,
-        amount: u64,
-        description: String,
-    ) -> u64 {
-        owner.require_auth();
-        Self::require_pet_owner(&env, pet_id, &owner);
-        if policy_id.is_empty() || condition.is_empty() {
-            panic_with_error!(&env, ContractError::InvalidInput);
-        }
-        if policy_id.len() > Self::MAX_POLICY_ID_LEN
-            || condition.len() > insurance_validation::MAX_CONDITION_NAME_LEN
-            || description.len() > 500
-        {
-            panic_with_error!(&env, ContractError::InputStringTooLong);
-        }
-
-        let policy = Self::find_pet_policy_bounded(&env, pet_id, &policy_id)
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::InsurancePolicyNotFound));
-        let now = env.ledger().timestamp();
-        if !policy.active || now >= policy.expiry_date {
-            panic_with_error!(&env, ContractError::InsurancePolicyInactive);
-        }
-        let terms_key = InsuranceKey::ConditionCoverage((pet_id, policy_id.clone(), condition.clone()));
-        let terms: ConditionCoverage = env
-            .storage()
-            .instance()
-            .get(&terms_key)
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::BenefitConditionNotFound));
-        if let Err(error) = insurance_validation::validate_service_date(
-            terms.coverage_start,
-            terms.waiting_period_end,
-            service_date,
-            policy.expiry_date,
-            now,
-        ) {
-            Self::raise_benefit_error(&env, error);
-        }
-
-        let settlement = match insurance_validation::calculate_benefit_settlement(
-            amount,
-            terms.deductible,
-            terms.copay_bps,
-        ) {
-            Ok(value) => value,
-            Err(error) => Self::raise_benefit_error(&env, error),
-        };
-        let period_offset = (service_date - terms.coverage_start) / terms.period_secs;
-        let period_start = terms
-            .coverage_start
-            .checked_add(period_offset.checked_mul(terms.period_secs)
-                .unwrap_or_else(|| panic_with_error!(&env, ContractError::CounterOverflow)))
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::CounterOverflow));
-        let usage_key = InsuranceKey::ConditionUsage((
-            pet_id,
-            policy_id.clone(),
-            condition.clone(),
-            period_start,
-        ));
-        let current = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, ConditionPeriodUsage>(&usage_key)
-            .map(|usage| insurance_validation::ConditionUsage {
-                period_start,
-                paid: usage.paid,
-                pending: usage.pending,
-            });
-        let updated = match insurance_validation::reserve_condition_claim(
-            current,
-            period_start,
-            terms.coverage_limit,
-            settlement.insurer_payment,
-        ) {
-            Ok(value) => value,
-            Err(error) => Self::raise_benefit_error(&env, error),
-        };
-
-        let policy_claim_count_key = InsuranceKey::PolicyBenefitClaimCount((pet_id, policy_id.clone()));
-        let policy_claim_count = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, u64>(&policy_claim_count_key)
-            .unwrap_or(0);
-        if policy_claim_count >= Self::MAX_BENEFIT_CLAIMS_PER_POLICY {
-            panic_with_error!(&env, ContractError::BenefitClaimLimitReached);
-        }
-        let pet_claim_count_key = InsuranceKey::PetBenefitClaimCount(pet_id);
-        let pet_claim_count = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, u64>(&pet_claim_count_key)
-            .unwrap_or(0);
-        if pet_claim_count >= Self::MAX_BENEFIT_CLAIMS_PER_POLICY {
-            panic_with_error!(&env, ContractError::BenefitClaimLimitPerPetReached);
-        }
-        let next_policy_claim_count = policy_claim_count
-            .checked_add(1)
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::CounterOverflow));
-        let next_benefit_pet_claim_count = pet_claim_count
-            .checked_add(1)
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::CounterOverflow));
-        let claim_count = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, u64>(&InsuranceKey::ClaimCount)
-            .unwrap_or(0);
-        let claim_id = safe_increment(&env, claim_count);
-        let pet_claim_count = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, u64>(&InsuranceKey::PetClaimCount(pet_id))
-            .unwrap_or(0);
-        let next_pet_claim_count = safe_increment(&env, pet_claim_count);
-
-        let claim = InsuranceClaim {
-            claim_id,
-            pet_id,
-            policy_id: policy_id.clone(),
-            amount,
-            date: service_date,
-            status: InsuranceClaimStatus::Pending,
-            description,
-            flagged: false,
-            fraud_flags: 0,
-            documents: Vec::new(&env),
-            rejected_at: None,
-            appeal_reason: None,
-            appeal_evidence_cids: Vec::new(&env),
-            appealed_at: None,
-            original_reviewer: None,
-            appeal_reviewer: None,
-        };
-        let benefit_claim = InsuranceBenefitClaim {
-            condition: condition.clone(),
-            period_start,
-            deductible_applied: settlement.deductible_applied,
-            copay: settlement.copay,
-            insurer_payment: settlement.insurer_payment,
-            finalized: false,
-        };
-
-        env.storage().instance().set(&usage_key, &ConditionPeriodUsage {
-            paid: updated.paid,
-            pending: updated.pending,
-        });
-        env.storage().instance().set(&InsuranceKey::Claim(claim_id), &claim);
-        env.storage().instance().set(&InsuranceKey::BenefitClaim(claim_id), &benefit_claim);
-        env.storage().instance().set(&InsuranceKey::ClaimCount, &claim_id);
-        env.storage().instance().set(&InsuranceKey::PetClaimIndex((pet_id, next_pet_claim_count)), &claim_id);
-        env.storage().instance().set(&InsuranceKey::PetClaimCount(pet_id), &next_pet_claim_count);
-        env.storage().instance().set(&policy_claim_count_key, &next_policy_claim_count);
-        env.storage()
-            .instance()
-            .set(&pet_claim_count_key, &next_benefit_pet_claim_count);
-
-        env.events().publish(
-            (Symbol::new(&env, "benefit_claim"),),
-            InsuranceBenefitClaimSubmittedEvent {
-                version: EVENT_SCHEMA_VERSION,
-                claim_id,
-                pet_id,
-                policy_id,
-                condition,
-                service_date,
-                deductible_applied: settlement.deductible_applied,
-                copay: settlement.copay,
-                insurer_payment: settlement.insurer_payment,
-                timestamp: now,
-            },
-        );
-        claim_id
-    }
-
-    /// An admin finalizes a condition claim exactly once. Approved amounts
-    /// move from pending to paid; rejected amounts release the reservation.
-    pub fn settle_condition_claim(env: Env, admin: Address, claim_id: u64, approved: bool) {
-        admin.require_auth();
-        if !Self::is_admin(&env, &admin) {
-            panic_with_error!(&env, ContractError::Unauthorized);
-        }
-        let mut claim: InsuranceClaim = env
-            .storage()
-            .instance()
-            .get(&InsuranceKey::Claim(claim_id))
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::ClaimNotFound));
-        let mut benefit_claim: InsuranceBenefitClaim = env
-            .storage()
-            .instance()
-            .get(&InsuranceKey::BenefitClaim(claim_id))
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::BenefitClaimNotPending));
-        if benefit_claim.finalized || !matches!(claim.status, InsuranceClaimStatus::Pending) {
-            panic_with_error!(&env, ContractError::BenefitClaimAlreadyFinalized);
-        }
-
-        let terms: ConditionCoverage = env
-            .storage()
-            .instance()
-            .get(&InsuranceKey::ConditionCoverage((
-                claim.pet_id,
-                claim.policy_id.clone(),
-                benefit_claim.condition.clone(),
-            )))
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::BenefitConditionNotFound));
-        let usage_key = InsuranceKey::ConditionUsage((
-            claim.pet_id,
-            claim.policy_id.clone(),
-            benefit_claim.condition.clone(),
-            benefit_claim.period_start,
-        ));
-        let current: ConditionPeriodUsage = env
-            .storage()
-            .instance()
-            .get(&usage_key)
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::BenefitClaimNotPending));
-        let updated = match insurance_validation::finalize_condition_claim(
-            insurance_validation::ConditionUsage {
-                period_start: benefit_claim.period_start,
-                paid: current.paid,
-                pending: current.pending,
-            },
-            benefit_claim.insurer_payment,
-            approved,
-            terms.coverage_limit,
-        ) {
-            Ok(value) => value,
-            Err(error) => Self::raise_benefit_error(&env, error),
-        };
-
-        benefit_claim.finalized = true;
-        claim.status = if approved {
-            Self::mark_claim_settled(&env, claim_id);
-            InsuranceClaimStatus::Paid
-        } else {
-            InsuranceClaimStatus::Rejected
-        };
-        env.storage().instance().set(&usage_key, &ConditionPeriodUsage {
-            paid: updated.paid,
-            pending: updated.pending,
-        });
-        env.storage().instance().set(&InsuranceKey::BenefitClaim(claim_id), &benefit_claim);
-        env.storage().instance().set(&InsuranceKey::Claim(claim_id), &claim);
-        env.events().publish(
-            (Symbol::new(&env, "benefit_settled"),),
-            InsuranceBenefitSettledEvent {
-                version: EVENT_SCHEMA_VERSION,
-                claim_id,
-                pet_id: claim.pet_id,
-                condition: benefit_claim.condition,
-                period_start: benefit_claim.period_start,
-                insurer_payment: benefit_claim.insurer_payment,
-                approved,
-                timestamp: env.ledger().timestamp(),
-            },
-        );
     }
 
     // --- POLICY MANAGEMENT ---
@@ -18423,7 +17852,6 @@ impl PetChainContract {
             .instance()
             .get::<InsuranceKey, InsuranceClaim>(&InsuranceKey::Claim(claim_id))
             .unwrap_or_else(|| panic_with_error!(env, ContractError::ClaimNotFound));
-        Self::reject_legacy_benefit_claim_path(&env, claim_id);
 
         // ---- PAYOUT PATH: checks-effects-interactions ----
         if matches!(status, InsuranceClaimStatus::Paid) {
@@ -18509,7 +17937,6 @@ impl PetChainContract {
             .instance()
             .get::<InsuranceKey, InsuranceClaim>(&InsuranceKey::Claim(claim_id))
             .unwrap_or_else(|| panic_with_error!(env, ContractError::ClaimNotFound));
-        Self::reject_legacy_benefit_claim_path(&env, claim_id);
 
         // Only Rejected claims can be appealed
         if !matches!(claim.status, InsuranceClaimStatus::Rejected) {
@@ -18596,7 +18023,6 @@ impl PetChainContract {
             .instance()
             .get::<InsuranceKey, InsuranceClaim>(&InsuranceKey::Claim(claim_id))
             .unwrap_or_else(|| panic_with_error!(env, ContractError::ClaimNotFound));
-        Self::reject_legacy_benefit_claim_path(&env, claim_id);
 
         // Must be under appeal
         if !matches!(claim.status, InsuranceClaimStatus::UnderAppeal) {
@@ -18650,7 +18076,6 @@ impl PetChainContract {
             .instance()
             .get::<InsuranceKey, InsuranceClaim>(&InsuranceKey::Claim(claim_id))
             .unwrap_or_else(|| panic_with_error!(env, ContractError::ClaimNotFound));
-        Self::reject_legacy_benefit_claim_path(&env, claim_id);
 
         claim.flagged = true;
         claim.status = InsuranceClaimStatus::UnderReview;
@@ -18696,7 +18121,6 @@ impl PetChainContract {
             .instance()
             .get::<InsuranceKey, InsuranceClaim>(&InsuranceKey::Claim(claim_id))
             .unwrap_or_else(|| panic_with_error!(env, ContractError::ClaimNotFound));
-        Self::reject_legacy_benefit_claim_path(&env, claim_id);
 
         if !matches!(claim.status, InsuranceClaimStatus::UnderReview) {
             panic_with_error!(&env, ContractError::ClaimInvalidStatus);
@@ -18775,432 +18199,6 @@ impl PetChainContract {
         claims
     }
 
-    // =========================================================================
-    // INSURANCE ENROLLMENT WORKFLOW  (Issue #1470)
-    // COVERAGE / EXCLUSION SNAPSHOTS  (Issue #1472)
-    //
-    // An enrollment application moves through a strict state machine:
-    //
-    //   Draft -> Submitted -> UnderReview -> Accepted
-    //                                      -> Declined
-    //
-    // Every transition is authorized (owner for draft/submit, admin for
-    // review/accept/decline), validated against the allowed transition table,
-    // and emits a versioned event. Accept/Decline are terminal and guarded by
-    // `InsuranceKey::EnrollmentDecision` so a replayed decision cannot flip an
-    // already-decided application.
-    //
-    // At submission time the policy's coverage and exclusions are captured in
-    // an immutable `CoverageSnapshot` (Issue #1472). Later policy edits cannot
-    // alter an existing enrollment's coverage: reads go through the snapshot.
-    // =========================================================================
-
-    /// Maximum number of coverage items captured in a snapshot.
-    const MAX_SNAPSHOT_COVERAGE_ITEMS: u32 = 32;
-    /// Maximum number of exclusion items captured in a snapshot.
-    const MAX_SNAPSHOT_EXCLUSION_ITEMS: u32 = 32;
-    /// Maximum length (bytes) of a single coverage/exclusion entry.
-    const MAX_SNAPSHOT_ITEM_LEN: u32 = 128;
-    /// Maximum number of enrollment applications per pet.
-    const MAX_ENROLLMENTS_PER_PET: u64 = 16;
-
-    /// Create a new enrollment application in `Draft` state for `pet_id`.
-    ///
-    /// The owner must authorize. The referenced policy must exist and be
-    /// active. Returns the new `enrollment_id`.
-    pub fn create_enrollment_draft(
-        env: Env,
-        owner: Address,
-        pet_id: u64,
-        policy_id: String,
-    ) -> u64 {
-        owner.require_auth();
-        Self::require_pet_owner(&env, pet_id, &owner);
-
-        let policy = Self::find_pet_policy(&env, pet_id, &policy_id)
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::InsurancePolicyNotFound));
-        if !policy.active {
-            panic_with_error!(&env, ContractError::InsurancePolicyInactive);
-        }
-
-        let pet_count: u64 = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, u64>(&InsuranceKey::PetEnrollmentCount(pet_id))
-            .unwrap_or(0);
-        if pet_count >= Self::MAX_ENROLLMENTS_PER_PET {
-            panic_with_error!(&env, ContractError::EnrollmentLimitReached);
-        }
-
-        let count: u64 = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, u64>(&InsuranceKey::EnrollmentCount)
-            .unwrap_or(0);
-        let enrollment_id = safe_increment(&env, count);
-        let now = env.ledger().timestamp();
-
-        let enrollment = InsuranceEnrollment {
-            enrollment_id,
-            pet_id,
-            policy_id: policy_id.clone(),
-            owner: owner.clone(),
-            status: EnrollmentStatus::Draft,
-            policy_version: 0,
-            created_at: now,
-            submitted_at: None,
-            decided_at: None,
-            reviewer: None,
-            decline_reason: None,
-        };
-        let key = InsuranceKey::Enrollment(enrollment_id);
-        env.storage().instance().set(&key, &enrollment);
-        env.storage()
-            .instance()
-            .set(&InsuranceKey::EnrollmentCount, &enrollment_id);
-
-        let new_pet_count = safe_increment(&env, pet_count);
-        env.storage().instance().set(
-            &InsuranceKey::PetEnrollmentIndex((pet_id, new_pet_count)),
-            &enrollment_id,
-        );
-        env.storage()
-            .instance()
-            .set(&InsuranceKey::PetEnrollmentCount(pet_id), &new_pet_count);
-
-        env.events().publish(
-            (Symbol::new(&env, "enrollment_draft"),),
-            EnrollmentDraftEvent {
-                version: EVENT_SCHEMA_VERSION,
-                enrollment_id,
-                pet_id,
-                policy_id,
-                owner,
-                timestamp: now,
-            },
-        );
-        enrollment_id
-    }
-
-    /// Submit a `Draft` enrollment for review. Owner-only.
-    ///
-    /// Captures the immutable coverage/exclusion snapshot bound to the
-    /// current policy version (Issue #1472). Re-submitting an already
-    /// submitted application is rejected.
-    pub fn submit_enrollment(
-        env: Env,
-        owner: Address,
-        enrollment_id: u64,
-        coverage_items: Vec<String>,
-        exclusion_items: Vec<String>,
-    ) {
-        owner.require_auth();
-        let mut enrollment = Self::load_enrollment(&env, enrollment_id);
-        if enrollment.owner != owner {
-            panic_with_error!(&env, ContractError::Unauthorized);
-        }
-        if !matches!(enrollment.status, EnrollmentStatus::Draft) {
-            panic_with_error!(&env, ContractError::EnrollmentInvalidTransition);
-        }
-        if coverage_items.len() > Self::MAX_SNAPSHOT_COVERAGE_ITEMS
-            || exclusion_items.len() > Self::MAX_SNAPSHOT_EXCLUSION_ITEMS
-        {
-            panic_with_error!(&env, ContractError::EnrollmentSnapshotTooLarge);
-        }
-        for item in coverage_items.iter().chain(exclusion_items.iter()) {
-            if item.len() > Self::MAX_SNAPSHOT_ITEM_LEN {
-                panic_with_error!(&env, ContractError::EnrollmentSnapshotTooLarge);
-            }
-        }
-
-        let policy = Self::find_pet_policy(&env, enrollment.pet_id, &enrollment.policy_id)
-            .unwrap_or_else(|| panic_with_error!(&env, ContractError::InsurancePolicyNotFound));
-        if !policy.active {
-            panic_with_error!(&env, ContractError::InsurancePolicyInactive);
-        }
-
-        let now = env.ledger().timestamp();
-        let policy_version = Self::next_policy_version(&env, enrollment.pet_id, &enrollment.policy_id);
-
-        let snapshot = CoverageSnapshot {
-            enrollment_id,
-            pet_id: enrollment.pet_id,
-            policy_id: enrollment.policy_id.clone(),
-            policy_version,
-            coverage_limit: policy.coverage_limit,
-            premium: policy.premium,
-            coverage_items: coverage_items.clone(),
-            exclusion_items: exclusion_items.clone(),
-            captured_at: now,
-        };
-        let snapshot_key = InsuranceKey::CoverageSnapshot(enrollment_id);
-        env.storage().instance().set(&snapshot_key, &snapshot);
-
-        enrollment.status = EnrollmentStatus::Submitted;
-        enrollment.policy_version = policy_version;
-        enrollment.submitted_at = Some(now);
-        env.storage()
-            .instance()
-            .set(&InsuranceKey::Enrollment(enrollment_id), &enrollment);
-
-        env.events().publish(
-            (Symbol::new(&env, "enrollment_submitted"),),
-            EnrollmentSubmittedEvent {
-                version: EVENT_SCHEMA_VERSION,
-                enrollment_id,
-                pet_id: enrollment.pet_id,
-                policy_id: enrollment.policy_id,
-                policy_version,
-                coverage_count: coverage_items.len() as u32,
-                exclusion_count: exclusion_items.len() as u32,
-                timestamp: now,
-            },
-        );
-    }
-
-    /// Move a `Submitted` enrollment to `UnderReview`. Admin-only.
-    pub fn review_enrollment(env: Env, admin: Address, enrollment_id: u64) {
-        Self::require_admin_auth(&env, &admin);
-        let mut enrollment = Self::load_enrollment(&env, enrollment_id);
-        if !matches!(enrollment.status, EnrollmentStatus::Submitted) {
-            panic_with_error!(&env, ContractError::EnrollmentInvalidTransition);
-        }
-        let now = env.ledger().timestamp();
-        enrollment.status = EnrollmentStatus::UnderReview;
-        enrollment.reviewer = Some(admin.clone());
-        env.storage()
-            .instance()
-            .set(&InsuranceKey::Enrollment(enrollment_id), &enrollment);
-
-        env.events().publish(
-            (Symbol::new(&env, "enrollment_review"),),
-            EnrollmentReviewedEvent {
-                version: EVENT_SCHEMA_VERSION,
-                enrollment_id,
-                pet_id: enrollment.pet_id,
-                reviewer: admin,
-                timestamp: now,
-            },
-        );
-    }
-
-    /// Accept an `UnderReview` enrollment. Admin-only, terminal.
-    ///
-    /// Replay-guarded: a second accept/decline on the same enrollment panics
-    /// with `EnrollmentAlreadyDecided` and leaves state unchanged.
-    pub fn accept_enrollment(env: Env, admin: Address, enrollment_id: u64) {
-        Self::require_admin_auth(&env, &admin);
-        let mut enrollment = Self::load_enrollment(&env, enrollment_id);
-        Self::require_undecided(&env, enrollment_id);
-        if !matches!(enrollment.status, EnrollmentStatus::UnderReview) {
-            panic_with_error!(&env, ContractError::EnrollmentInvalidTransition);
-        }
-        let now = env.ledger().timestamp();
-        Self::mark_enrollment_decided(&env, enrollment_id);
-
-        enrollment.status = EnrollmentStatus::Accepted;
-        enrollment.decided_at = Some(now);
-        enrollment.reviewer = Some(admin.clone());
-        env.storage()
-            .instance()
-            .set(&InsuranceKey::Enrollment(enrollment_id), &enrollment);
-
-        env.events().publish(
-            (Symbol::new(&env, "enrollment_accepted"),),
-            EnrollmentDecidedEvent {
-                version: EVENT_SCHEMA_VERSION,
-                enrollment_id,
-                pet_id: enrollment.pet_id,
-                policy_id: enrollment.policy_id,
-                policy_version: enrollment.policy_version,
-                accepted: true,
-                reviewer: admin,
-                timestamp: now,
-            },
-        );
-    }
-
-    /// Decline an `UnderReview` enrollment. Admin-only, terminal.
-    pub fn decline_enrollment(
-        env: Env,
-        admin: Address,
-        enrollment_id: u64,
-        reason: String,
-    ) {
-        Self::require_admin_auth(&env, &admin);
-        let mut enrollment = Self::load_enrollment(&env, enrollment_id);
-        Self::require_undecided(&env, enrollment_id);
-        if !matches!(enrollment.status, EnrollmentStatus::UnderReview) {
-            panic_with_error!(&env, ContractError::EnrollmentInvalidTransition);
-        }
-        if reason.len() > Self::MAX_SNAPSHOT_ITEM_LEN {
-            panic_with_error!(&env, ContractError::InvalidInput);
-        }
-        let now = env.ledger().timestamp();
-        Self::mark_enrollment_decided(&env, enrollment_id);
-
-        enrollment.status = EnrollmentStatus::Declined;
-        enrollment.decided_at = Some(now);
-        enrollment.reviewer = Some(admin.clone());
-        enrollment.decline_reason = Some(reason);
-        env.storage()
-            .instance()
-            .set(&InsuranceKey::Enrollment(enrollment_id), &enrollment);
-
-        env.events().publish(
-            (Symbol::new(&env, "enrollment_declined"),),
-            EnrollmentDecidedEvent {
-                version: EVENT_SCHEMA_VERSION,
-                enrollment_id,
-                pet_id: enrollment.pet_id,
-                policy_id: enrollment.policy_id,
-                policy_version: enrollment.policy_version,
-                accepted: false,
-                reviewer: admin,
-                timestamp: now,
-            },
-        );
-    }
-
-    /// Read an enrollment application.
-    pub fn get_enrollment(env: Env, enrollment_id: u64) -> Option<InsuranceEnrollment> {
-        env.storage()
-            .instance()
-            .get(&InsuranceKey::Enrollment(enrollment_id))
-    }
-
-    /// Read the immutable coverage snapshot bound to an enrollment.
-    pub fn get_coverage_snapshot(env: Env, enrollment_id: u64) -> Option<CoverageSnapshot> {
-        env.storage()
-            .instance()
-            .get(&InsuranceKey::CoverageSnapshot(enrollment_id))
-    }
-
-    /// List all enrollment ids for a pet, in creation order.
-    pub fn get_pet_enrollments(env: Env, pet_id: u64) -> Vec<u64> {
-        let count: u64 = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, u64>(&InsuranceKey::PetEnrollmentCount(pet_id))
-            .unwrap_or(0);
-        let mut ids = Vec::new(&env);
-        for index in 1..=count {
-            if let Some(id) = env
-                .storage()
-                .instance()
-                .get::<InsuranceKey, u64>(&InsuranceKey::PetEnrollmentIndex((pet_id, index)))
-            {
-                ids.push_back(id);
-            }
-        }
-        ids
-    }
-
-    // --- ENROLLMENT INTERNAL HELPERS ---
-
-    fn load_enrollment(env: &Env, enrollment_id: u64) -> InsuranceEnrollment {
-        env.storage()
-            .instance()
-            .get(&InsuranceKey::Enrollment(enrollment_id))
-            .unwrap_or_else(|| panic_with_error!(env, ContractError::EnrollmentNotFound))
-    }
-
-    fn require_undecided(env: &Env, enrollment_id: u64) {
-        if env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, bool>(&InsuranceKey::EnrollmentDecision(enrollment_id))
-            .unwrap_or(false)
-        {
-            panic_with_error!(env, ContractError::EnrollmentAlreadyDecided);
-        }
-    }
-
-    fn mark_enrollment_decided(env: &Env, enrollment_id: u64) {
-        env.storage()
-            .instance()
-            .set(&InsuranceKey::EnrollmentDecision(enrollment_id), &true);
-    }
-
-    fn require_pet_owner(env: &Env, pet_id: u64, caller: &Address) {
-        let pet: Pet = env
-            .storage()
-            .instance()
-            .get(&DataKey::Pet(pet_id))
-            .unwrap_or_else(|| panic_with_error!(env, ContractError::PetNotFound));
-        if pet.owner != *caller {
-            panic_with_error!(env, ContractError::Unauthorized);
-        }
-    }
-
-    /// Locate a policy by its string id within a pet's policy index.
-    fn find_pet_policy(env: &Env, pet_id: u64, policy_id: &String) -> Option<InsurancePolicy> {
-        let count: u64 = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, u64>(&InsuranceKey::PetPolicyCount(pet_id))
-            .unwrap_or(0);
-        for index in (1..=count).rev() {
-            if let Some(policy) = env
-                .storage()
-                .instance()
-                .get::<InsuranceKey, InsurancePolicy>(&InsuranceKey::PetPolicyIndex((
-                    pet_id, index,
-                )))
-            {
-                if policy.policy_id == *policy_id {
-                    return Some(policy);
-                }
-            }
-        }
-        None
-    }
-
-    fn find_pet_policy_bounded(
-        env: &Env,
-        pet_id: u64,
-        policy_id: &String,
-    ) -> Option<InsurancePolicy> {
-        let count = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, u64>(&InsuranceKey::PetPolicyCount(pet_id))
-            .unwrap_or(0);
-        if count == 0 {
-            return None;
-        }
-        let first_index = count
-            .saturating_sub(insurance_validation::MAX_CONDITIONS_PER_POLICY as u64 - 1)
-            .max(1);
-        for index in (first_index..=count).rev() {
-            let key = InsuranceKey::PetPolicyIndex((pet_id, index));
-            if let Some(policy) = env
-                .storage()
-                .instance()
-                .get::<InsuranceKey, InsurancePolicy>(&key)
-            {
-                if policy.policy_id == *policy_id {
-                    return Some(policy);
-                }
-            }
-        }
-        None
-    }
-
-    /// Derive the next policy version for a (pet, policy) pair from the
-    /// number of snapshots already captured. Monotonic and bounded by the
-    /// per-pet enrollment cap.
-    fn next_policy_version(env: &Env, pet_id: u64, _policy_id: &String) -> u32 {
-        let count: u64 = env
-            .storage()
-            .instance()
-            .get::<InsuranceKey, u64>(&InsuranceKey::PetEnrollmentCount(pet_id))
-            .unwrap_or(0);
-        u32::try_from(count)
-            .unwrap_or(Self::MAX_SNAPSHOT_COVERAGE_ITEMS)
-            .saturating_add(1)
-    }
-
     /// Returns whether a pet has an active insurance policy.
     pub fn is_insurance_active(env: Env, pet_id: u64) -> bool {
         let now = env.ledger().timestamp();
@@ -19224,7 +18222,7 @@ impl PetChainContract {
         }
         false
     }
-} // end impl PetChainContract
+} // end impl CatChainContract
 
 // --- OVERFLOW-SAFE COUNTER HELPER ---
 pub(crate) fn safe_increment(env: &Env, count: u64) -> u64 {
@@ -19329,7 +18327,7 @@ fn xor_stream_crypt(env: &Env, input: &Bytes, key: &Bytes, nonce: &Bytes) -> Byt
 
 #[cfg(test)]
 mod test_emergency_contact_invariants {
-    use super::{EmergencyContact, PetChainContract};
+    use super::{EmergencyContact, CatChainContract};
     use soroban_sdk::{Env, String, Vec};
 
     fn contact(
@@ -19378,7 +18376,7 @@ mod test_emergency_contact_invariants {
             2,
         ));
 
-        PetChainContract::validate_emergency_contacts(&env, &contacts);
+        CatChainContract::validate_emergency_contacts(&env, &contacts);
     }
 
     #[test]
@@ -19395,7 +18393,7 @@ mod test_emergency_contact_invariants {
             u32::MAX,
         ));
 
-        PetChainContract::validate_emergency_contacts(&env, &contacts);
+        CatChainContract::validate_emergency_contacts(&env, &contacts);
     }
 
     #[test]
@@ -19424,7 +18422,7 @@ mod test_emergency_contact_invariants {
 
         let cpu_before = env.budget().cpu_instruction_cost();
         let mem_before = env.budget().memory_bytes_cost();
-        PetChainContract::validate_emergency_contacts(&env, &contacts);
+        CatChainContract::validate_emergency_contacts(&env, &contacts);
         let cpu_used = env.budget().cpu_instruction_cost() - cpu_before;
         let mem_used = env.budget().memory_bytes_cost() - mem_before;
 
@@ -19455,7 +18453,7 @@ mod test_emergency_contact_invariants {
 #[cfg(test)]
 mod test_lab_result_anomaly {
     use crate::{
-        Gender, LabResultAnomaly, PetChainContract, PetChainContractClient, PrivacyLevel, Species,
+        Gender, LabResultAnomaly, CatChainContract, CatChainContractClient, PrivacyLevel, Species,
         EVENT_SCHEMA_VERSION,
     };
     use soroban_sdk::{
@@ -19463,14 +18461,14 @@ mod test_lab_result_anomaly {
         Address, Env, Map, String, TryFromVal, Val,
     };
 
-    fn setup() -> (Env, PetChainContractClient<'static>, Address, Address, u64) {
+    fn setup() -> (Env, CatChainContractClient<'static>, Address, Address, u64) {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
 
         let admin = Address::generate(&env);
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         client.init_admin(&admin);
 
         let owner = Address::generate(&env);
@@ -19480,7 +18478,7 @@ mod test_lab_result_anomaly {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &String::from_str(&env, "Brown"),
             &25u32,
@@ -19500,7 +18498,7 @@ mod test_lab_result_anomaly {
 
     fn add_glucose(
         env: &Env,
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         pet_id: u64,
         vet: &Address,
         glucose: i128,
@@ -19521,7 +18519,7 @@ mod test_lab_result_anomaly {
         );
     }
 
-    fn seed_history(env: &Env, client: &PetChainContractClient, pet_id: u64, vet: &Address) {
+    fn seed_history(env: &Env, client: &CatChainContractClient, pet_id: u64, vet: &Address) {
         // 9 readings of 100
         for i in 0..9u64 {
             add_glucose(env, client, pet_id, vet, 100, 1000 + i * 100);
@@ -19599,11 +18597,6 @@ mod test_lab_result_anomaly {
 
 #[cfg(test)]
 mod test_breeding_coi;
-
-#[cfg(test)]
-mod test_insurance_enrollment;
-#[cfg(test)]
-mod test_insurance_coverage_snapshot;
 
 #[allow(dead_code)]
 mod insurance_ledger;

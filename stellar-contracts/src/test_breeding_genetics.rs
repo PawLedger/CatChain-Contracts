@@ -1,11 +1,11 @@
-use crate::{Allele, Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+use crate::{Allele, Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
 use soroban_sdk::{testutils::Address as _, Address, Env, Map, String};
 
-fn setup() -> (Env, PetChainContractClient<'static>, Address, u64, u64) {
+fn setup() -> (Env, CatChainContractClient<'static>, Address, u64, u64) {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let owner = Address::generate(&env);
 
     let sire_id = client.register_pet(
@@ -13,7 +13,7 @@ fn setup() -> (Env, PetChainContractClient<'static>, Address, u64, u64) {
         &String::from_str(&env, "Sire"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Black"),
         &String::from_str(&env, "Lab"),
         &30u32,
@@ -25,7 +25,7 @@ fn setup() -> (Env, PetChainContractClient<'static>, Address, u64, u64) {
         &String::from_str(&env, "Dam"),
         &String::from_str(&env, "2020-06-01"),
         &Gender::Female,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Brown"),
         &String::from_str(&env, "Lab"),
         &25u32,

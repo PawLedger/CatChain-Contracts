@@ -6,8 +6,8 @@ fn test_keyword_index_is_per_pet() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let owner = Address::generate(&env);
     let vet = Address::generate(&env);
     let admin = Address::generate(&env);
@@ -38,7 +38,7 @@ fn test_keyword_index_is_per_pet() {
         &String::from_str(&env, "Two"),
         &String::from_str(&env, "2021-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Black"),
         &String::from_str(&env, "Mixed"),
         &15,
@@ -77,16 +77,16 @@ fn test_keyword_index_is_per_pet() {
 
 #[cfg(test)]
 mod test_medical_records_pagination {
-    use crate::{Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+    use crate::{Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
     use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-    fn setup() -> (Env, PetChainContractClient<'static>, Address, Address, Address, u64) {
+    fn setup() -> (Env, CatChainContractClient<'static>, Address, Address, Address, u64) {
         let env = Env::default();
         let admin = Address::generate(&env);
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         client.init_admin(&admin);
 
         let owner = Address::generate(&env);
@@ -96,7 +96,7 @@ mod test_medical_records_pagination {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &String::from_str(&env, "Brown"),
             &25u32,
@@ -116,7 +116,7 @@ mod test_medical_records_pagination {
     }
 
     fn add_record(
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         env: &Env,
         pet_id: u64,
         vet: &Address,

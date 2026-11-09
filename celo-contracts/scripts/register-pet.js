@@ -7,10 +7,10 @@ const hre = require("hardhat");
 //
 // Optional env overrides:
 //   CONTRACT_ADDRESS - overrides the address from the deployment manifest
-//   OWNER_ADDRESS    - owner of the pet record (defaults to the signer)
-//   VET_ADDRESS      - vet address recorded for the pet (defaults to the signer)
+//   OWNER_ADDRESS    - owner of the cat record (defaults to the signer)
+//   VET_ADDRESS      - vet address recorded for the cat (defaults to the signer)
 //   CHIP_ID          - unique chip identifier (defaults to a deterministic value)
-const MANIFEST_PATH = path.join(__dirname, "..", "deployments", "PetChainRegistry.json");
+const MANIFEST_PATH = path.join(__dirname, "..", "deployments", "CatChainRegistry.json");
 
 function loadManifest() {
   if (!fs.existsSync(MANIFEST_PATH)) {
@@ -49,11 +49,11 @@ async function main() {
 
   const contractAddress = process.env.CONTRACT_ADDRESS || manifest.address;
   if (!contractAddress) {
-    throw new Error("Set CONTRACT_ADDRESS to the deployed PetChainRegistry address");
+    throw new Error("Set CONTRACT_ADDRESS to the deployed CatChainRegistry address");
   }
 
   const [signer] = await hre.ethers.getSigners();
-  const registry = await hre.ethers.getContractAt("PetChainRegistry", contractAddress);
+  const registry = await hre.ethers.getContractAt("CatChainRegistry", contractAddress);
 
   const owner = process.env.OWNER_ADDRESS || signer.address;
   const vet = process.env.VET_ADDRESS || signer.address;
@@ -71,7 +71,7 @@ async function main() {
     throw new Error("CHIP_ID must be a non-empty identifier");
   }
 
-  const tx = await registry.registerPet(owner, vet, chipId, "Rex", "Dog", "Labrador", "2020-01-01");
+  const tx = await registry.registerPet(owner, vet, chipId, "Whiskers", "Cat", "Persian", "2020-01-01");
   const receipt = await tx.wait();
 
   const event = receipt.logs

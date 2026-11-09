@@ -8,7 +8,7 @@ use soroban_sdk::{
 // Helper function to setup test environment
 fn setup_test_env() -> (
     Env,
-    PetChainContractClient<'static>,
+    CatChainContractClient<'static>,
     Address,
     Address,
     u64,
@@ -17,8 +17,8 @@ fn setup_test_env() -> (
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     // Register owner and pet
     let owner = Address::generate(&env);
@@ -43,7 +43,7 @@ fn setup_test_env() -> (
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &25u32,
@@ -742,7 +742,7 @@ fn test_add_attachment_zero_hash_rejected() {
 
 fn setup_with_scanner() -> (
     Env,
-    PetChainContractClient<'static>,
+    CatChainContractClient<'static>,
     Address, // owner
     Address, // admin
     Address, // scanner
@@ -751,8 +751,8 @@ fn setup_with_scanner() -> (
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let vet = Address::generate(&env);
@@ -773,7 +773,7 @@ fn setup_with_scanner() -> (
         &String::from_str(&env, "Rex"),
         &String::from_str(&env, "2021-06-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &30u32,

@@ -1,22 +1,22 @@
-use crate::{Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+use crate::{Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-fn setup(env: &Env) -> (PetChainContractClient, Address) {
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+fn setup(env: &Env) -> (CatChainContractClient, Address) {
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
     let admin = Address::generate(env);
     client.init_admin(&admin);
     (client, admin)
 }
 
-fn do_register(env: &Env, client: &PetChainContractClient, owner: &Address, nonce: u64) -> u64 {
+fn do_register(env: &Env, client: &CatChainContractClient, owner: &Address, nonce: u64) -> u64 {
     client.register_pet_with_nonce(
         owner,
         &nonce,
         &String::from_str(env, "Buddy"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Brown"),
         &10,

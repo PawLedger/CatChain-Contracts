@@ -39,23 +39,23 @@ fn hex_to_array(hex: &str) -> [u8; 32] {
     out
 }
 
-fn setup() -> (Env, PetChainContractClient<'static>, u64) {
+fn setup() -> (Env, CatChainContractClient<'static>, u64) {
     let env = Env::default();
     env.mock_all_auths();
     env.ledger().with_mut(|l| l.timestamp = T0);
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let pet_id = register_pet(&env, &client);
     (env, client, pet_id)
 }
 
-fn register_pet(env: &Env, client: &PetChainContractClient) -> u64 {
+fn register_pet(env: &Env, client: &CatChainContractClient) -> u64 {
     client.register_pet(
         &Address::generate(env),
         &String::from_str(env, "Buddy"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Golden Retriever"),
         &String::from_str(env, "Golden"),
         &25u32,

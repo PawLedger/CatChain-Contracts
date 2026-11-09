@@ -8,10 +8,10 @@ use soroban_sdk::{
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn setup(env: &Env) -> (PetChainContractClient<'_>, Address, Address, u64) {
+fn setup(env: &Env) -> (CatChainContractClient<'_>, Address, Address, u64) {
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
 
     let admin = Address::generate(env);
     let vet = Address::generate(env);
@@ -31,7 +31,7 @@ fn setup(env: &Env) -> (PetChainContractClient<'_>, Address, Address, u64) {
         &String::from_str(env, "Buddy"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Brown"),
         &25,
@@ -43,7 +43,7 @@ fn setup(env: &Env) -> (PetChainContractClient<'_>, Address, Address, u64) {
 }
 
 fn add_record(
-    client: &PetChainContractClient<'_>,
+    client: &CatChainContractClient<'_>,
     env: &Env,
     vet: &Address,
     pet_id: u64,
@@ -246,8 +246,8 @@ fn test_admin_purge_after_retention_succeeds() {
     // we need the admin address. Use a fresh env to get the admin.
     let env2 = Env::default();
     env2.mock_all_auths();
-    let contract_id2 = env2.register_contract(None, PetChainContract);
-    let client2 = PetChainContractClient::new(&env2, &contract_id2);
+    let contract_id2 = env2.register_contract(None, CatChainContract);
+    let client2 = CatChainContractClient::new(&env2, &contract_id2);
     let admin2 = Address::generate(&env2);
     let vet2 = Address::generate(&env2);
     let owner2 = Address::generate(&env2);
@@ -264,7 +264,7 @@ fn test_admin_purge_after_retention_succeeds() {
         &String::from_str(&env2, "Rex"),
         &String::from_str(&env2, "2019-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env2, "Husky"),
         &String::from_str(&env2, "White"),
         &30,
@@ -298,9 +298,9 @@ fn test_custom_retention_period_respected() {
     let env = Env::default();
     env.ledger().with_mut(|l| l.timestamp = 1_700_000_000);
 
-    let contract_id = env.register_contract(None, PetChainContract);
+    let contract_id = env.register_contract(None, CatChainContract);
     env.mock_all_auths();
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
     let vet = Address::generate(&env);
     let owner = Address::generate(&env);
@@ -319,7 +319,7 @@ fn test_custom_retention_period_respected() {
         &String::from_str(&env, "Fido"),
         &String::from_str(&env, "2021-01-01"),
         &Gender::Female,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Poodle"),
         &String::from_str(&env, "Black"),
         &10,
@@ -509,7 +509,7 @@ fn test_delete_rejects_cross_pet_provenance() {
         &String::from_str(&env, "Second"),
         &String::from_str(&env, "2022-02-02"),
         &Gender::Female,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Beagle"),
         &String::from_str(&env, "White"),
         &3,

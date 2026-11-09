@@ -1,5 +1,5 @@
 use crate::{
-    Gender, InsuranceClaimStatus, PetChainContract, PetChainContractClient, PrivacyLevel, Species,
+    Gender, InsuranceClaimStatus, CatChainContract, CatChainContractClient, PrivacyLevel, Species,
 };
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
@@ -7,9 +7,9 @@ use soroban_sdk::{testutils::Address as _, Address, Env, String};
 const VALID_CID: &str = "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG";
 const VALID_CID2: &str = "QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM";
 
-fn setup(env: &Env) -> (PetChainContractClient, Address, Address, u64) {
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+fn setup(env: &Env) -> (CatChainContractClient, Address, Address, u64) {
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
     let admin = Address::generate(env);
     let owner = Address::generate(env);
     client.init_admin(&admin);
@@ -19,7 +19,7 @@ fn setup(env: &Env) -> (PetChainContractClient, Address, Address, u64) {
         &String::from_str(env, "Rex"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Brown"),
         &20,

@@ -1,12 +1,12 @@
-use crate::{Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+use crate::{Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     Address, Env, String,
 };
 
-fn make_client(env: &Env) -> PetChainContractClient {
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+fn make_client(env: &Env) -> CatChainContractClient {
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
     let admin = Address::generate(env);
     client.init_admin(&admin);
     client
@@ -25,7 +25,7 @@ fn test_register_pet_valid_birthday() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Brown"),
         &String::from_str(&env, "Labrador"),
         &20,
@@ -49,7 +49,7 @@ fn test_register_pet_future_birthday_rejected() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2030-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Brown"),
         &String::from_str(&env, "Labrador"),
         &20,
@@ -74,7 +74,7 @@ fn test_register_pet_impossibly_old_birthday_rejected() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "1"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Brown"),
         &String::from_str(&env, "Labrador"),
         &20,

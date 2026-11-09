@@ -33,8 +33,8 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        ActivityType, BehaviorType, ContractError, Gender, PetChainContract,
-        PetChainContractClient, PrivacyLevel, Species,
+        ActivityType, BehaviorType, ContractError, Gender, CatChainContract,
+        CatChainContractClient, PrivacyLevel, Species,
         MAX_ACTIVITY_NOTES_LEN, MAX_BEHAVIOR_DESC_LEN, MAX_BREEDING_NOTES_LEN,
         MAX_COLOR_LEN, MAX_LAB_REF_RANGES_LEN, MAX_LAB_RESULTS_LEN,
         MAX_LAB_TEST_TYPE_LEN, MAX_MEDICAL_DIAGNOSIS_LEN, MAX_MEDICAL_NOTES_LEN,
@@ -44,7 +44,7 @@ mod tests {
 
     // ─── helpers ──────────────────────────────────────────────────────────────
 
-    fn setup() -> (Env, PetChainContractClient<'static>, Address, Address) {
+    fn setup() -> (Env, CatChainContractClient<'static>, Address, Address) {
         let env = Env::default();
         env.mock_all_auths();
         env.budget().reset_unlimited();
@@ -53,8 +53,8 @@ mod tests {
             li.timestamp = 1_700_000_000;
         });
 
-        let contract_id = env.register(PetChainContract, ());
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register(CatChainContract, ());
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let admin = Address::generate(&env);
         let mut admins = soroban_sdk::Vec::new(&env);
@@ -71,13 +71,13 @@ mod tests {
         String::from_str(env, &s)
     }
 
-    fn register_pet(client: &PetChainContractClient, env: &Env, owner: &Address) -> u64 {
+    fn register_pet(client: &CatChainContractClient, env: &Env, owner: &Address) -> u64 {
         client.register_pet(
             owner,
             &String::from_str(env, "TestPet"),
             &String::from_str(env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(env, "Labrador"),
             &String::from_str(env, "Yellow"),
             &25u32,
@@ -86,7 +86,7 @@ mod tests {
         )
     }
 
-    fn setup_vet(client: &PetChainContractClient, env: &Env, admin: &Address) -> Address {
+    fn setup_vet(client: &CatChainContractClient, env: &Env, admin: &Address) -> Address {
         let vet = Address::generate(env);
         client.register_vet(
             &vet,
@@ -109,7 +109,7 @@ mod tests {
             &String::from_str(&env, "ColorPet"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &str_of_len(&env, MAX_COLOR_LEN),
             &25u32,
@@ -129,7 +129,7 @@ mod tests {
                 &String::from_str(&env, "ColorPet"),
                 &String::from_str(&env, "2020-01-01"),
                 &Gender::Male,
-                &Species::Dog,
+                &Species::Cat,
                 &String::from_str(&env, "Labrador"),
                 &str_of_len(&env, MAX_COLOR_LEN + 1),
                 &25u32,
@@ -214,7 +214,7 @@ mod tests {
     // ─── medical record fields ────────────────────────────────────────────────
 
     fn add_medical_record(
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         env: &Env,
         pet_id: u64,
         vet: &Address,
@@ -342,7 +342,7 @@ mod tests {
     // ─── lab result fields ────────────────────────────────────────────────────
 
     fn add_lab(
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         env: &Env,
         pet_id: u64,
         vet: &Address,

@@ -9,7 +9,7 @@ use crate::two_factor::{
 };
 
 /// Key prefix for all 2FA Redis entries.
-const KEY_PREFIX: &str = "petchain:2fa";
+const KEY_PREFIX: &str = "catchain:2fa";
 
 fn user_key(user_id: &str) -> String {
     format!("{}:{}", KEY_PREFIX, user_id)
@@ -80,7 +80,7 @@ impl TwoFactorDataRedis {
 
 /// Redis-backed implementation of [`TwoFactorStore`].
 ///
-/// Stores 2FA data as JSON values under `petchain:2fa:{user_id}`.
+/// Stores 2FA data as JSON values under `catchain:2fa:{user_id}`.
 /// Data persists until explicitly deleted (no TTL).
 pub struct RedisTwoFactorStore {
     client: redis::Client,

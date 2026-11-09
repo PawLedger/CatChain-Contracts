@@ -17,23 +17,23 @@
 #[cfg(test)]
 mod test_get_pet_decryption {
     use crate::{
-        AccessLevel, DataKey, EncryptedData, Gender, Pet, PetChainContract, PetChainContractClient,
+        AccessLevel, DataKey, EncryptedData, Gender, Pet, CatChainContract, CatChainContractClient,
         PrivacyLevel, Species,
     };
     use soroban_sdk::{testutils::Address as _, Address, Bytes, Env, String, Vec};
 
     // ---- helpers ----
 
-    fn setup() -> (Env, PetChainContractClient<'static>, soroban_sdk::Address) {
+    fn setup() -> (Env, CatChainContractClient<'static>, soroban_sdk::Address) {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         (env, client, contract_id)
     }
 
     fn register_pet(
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         env: &Env,
         owner: &Address,
         privacy: PrivacyLevel,
@@ -43,7 +43,7 @@ mod test_get_pet_decryption {
             &String::from_str(env, "Buddy"),
             &String::from_str(env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(env, "Labrador"),
             &String::from_str(env, "Brown"),
             &25u32,
@@ -52,7 +52,7 @@ mod test_get_pet_decryption {
         )
     }
 
-    fn setup_verified_vet(client: &PetChainContractClient, env: &Env) -> Address {
+    fn setup_verified_vet(client: &CatChainContractClient, env: &Env) -> Address {
         let admin = Address::generate(env);
         let vet = Address::generate(env);
         let mut admins = soroban_sdk::Vec::new(env);
@@ -199,7 +199,7 @@ mod test_get_pet_decryption {
         assert_eq!(profile.name, String::from_str(&env, "Buddy"));
         assert_eq!(profile.birthday, String::from_str(&env, "2020-01-01"));
         assert_eq!(profile.breed, String::from_str(&env, "Labrador"));
-        assert_eq!(profile.species, Species::Dog);
+        assert_eq!(profile.species, Species::Cat);
         assert_eq!(profile.gender, Gender::Male);
         assert_eq!(profile.color, String::from_str(&env, "Brown"));
         assert_eq!(profile.weight, 25u32);
@@ -491,7 +491,7 @@ mod test_get_pet_decryption {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &String::from_str(&env, "Brown"),
             &25u32,
@@ -538,7 +538,7 @@ mod test_get_pet_decryption {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &String::from_str(&env, "Brown"),
             &25u32,

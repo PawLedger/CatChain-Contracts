@@ -9,13 +9,13 @@
 
 #[cfg(test)]
 mod test_storage_tier_policy {
-    use crate::{DataKey, Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+    use crate::{DataKey, Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
     use soroban_sdk::{testutils::Address as _, Address, Env, String, Vec};
 
-    fn setup(env: &Env) -> (PetChainContractClient<'_>, Address) {
+    fn setup(env: &Env) -> (CatChainContractClient<'_>, Address) {
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(env, &contract_id);
         (client, contract_id)
     }
 
@@ -33,7 +33,7 @@ mod test_storage_tier_policy {
             &String::from_str(&env, "Tier"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Mixed"),
             &String::from_str(&env, "Grey"),
             &22,

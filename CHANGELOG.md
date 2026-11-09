@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the PetChain-Contracts project will be documented in this file.
+All notable changes to the CatChain-Contracts project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -9,13 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Insurance benefit sections (#1473–#1475): policies support immutable, owner-configured per-condition coverage start and waiting-period dates, policy-period paid/pending limits, and deductible/copay settlement with floor-rounded copay basis points. Claims validate service dates before writing, reserve insurer liability per condition and period, and can only be finalized by an admin through a replay-protected settlement method; legacy claim transitions cannot bypass this accounting. Benefit state is bounded to 32 condition sections and 256 benefit claims per pet and per policy, with policy lookup limited to 32 entries. New errors 209–219 cover benefit conditions, waiting periods, limits and settlement; 220–226 restore enrollment/policy errors and 227 caps benefit claims per pet. See `stellar-contracts/docs/insurance-benefits.md`.
-- Medication refill authorization records (#1416): refill requests are tracked as immutable records carrying the prescription ID, requester, ledger time and vet-approval state, so the full request/approval chain is auditable without ever storing private prescription text on-chain. Refills are rejected for prescriptions that are inactive or expired, approvals preserve the existing authorization checks and storage-version conventions, and input sizes, record iteration and persistent state growth are bounded; failed calls leave state unchanged.
-- Care-plan amendment history (#1414): each care-plan amendment is recorded as a new immutable revision carrying the author, ledger time and the superseded revision ID, so the full amendment chain is auditable and prior revisions can never be overwritten. Amendments preserve the existing authorization checks and storage-version conventions; input sizes, revision iteration and persistent state growth are bounded, and failed calls leave state unchanged.
-- Adoption consent evidence commitments (#1453): required consent artifacts are bound to a canonical SHA-256 digest (`consent_evidence_digest`) over domain, version, pet ID, applicant, artifact kind and each artifact's own digest in canonical order; the contract stores only commitments/digests and never applicant personal documents in plaintext. `record_adoption_consent` enforces existing owner/applicant authorization, bounds artifact count and per-artifact digest size, rejects replays of an already-recorded commitment, and honors an optional expiry; failed calls leave state unchanged. New error codes and events are documented in `stellar-contracts/docs/abi-migrations.md`.
-- Medication allergy conflict checks (#1424): a proposed prescription's canonical ingredient IDs are compared against the pet's active allergy set before the prescription is recorded. When any ingredient matches an active allergy the call is rejected with `MedicationAllergyConflict` unless an explicit vet override record is supplied via `record_medication_allergy_override`, which binds the vet, the conflicting ingredient IDs, a bounded justification and an idempotency key. Overrides are versioned and auditable; replays of the same `(pet_id, prescription_id, idempotency_key)` are idempotent and return the existing record, while a conflicting payload for the same key raises `MedicationAllergyOverrideConflict`. Calls are rejected for unknown pets, non-vet callers, empty or oversized ingredient sets, oversized justifications and expired overrides, and failed calls leave state unchanged. New errors: `MedicationAllergyConflict` (182), `MedicationAllergyOverrideConflict` (183), `MedicationAllergyOverrideNotFound` (184), `InvalidMedicationIngredientSet` (185), `MedicationAllergyOverrideExpired` (186). New event: `MedicationAllergyOverrideEvent` (`pet_id`, `prescription_id`, `ingredient_ids`, `vet`, `timestamp`). Storage is additive under the existing schema version; see `stellar-contracts/docs/abi-migrations.md`.
-- Preventive-care schedule records (#1423): an owner can register an owner-approved reminder for a routine exam or preventive-care item via `create_preventive_care_schedule`, binding a bounded care kind, a due ledger timestamp and an explicit schedule version. Each schedule is versioned — `update_preventive_care_schedule` writes a new version and supersedes the previous one, and `cancel_preventive_care_schedule` marks the current version `Cancelled` while keeping prior versions auditable. Replays of the same `(pet_id, schedule_id, version, idempotency_key)` are idempotent and return the existing record; a conflicting payload for the same key raises `PreventiveCareScheduleConflict`. Calls are rejected for unknown pets, non-owner callers, out-of-range care kinds, oversized notes, past due timestamps and cancelled/expired schedules, and failed calls leave state unchanged. New errors: `PreventiveCareScheduleConflict` (177), `PreventiveCareScheduleNotFound` (178), `InvalidPreventiveCareKind` (179), `PreventiveCareScheduleExpired` (180), `PreventiveCareScheduleCancelled` (181). New event: `PreventiveCareScheduleEvent` (`pet_id`, `schedule_id`, `version`, `care_kind`, `due_at`, `status`, `owner`, `timestamp`). Storage is additive under the existing schema version; see `stellar-contracts/docs/abi-migrations.md`.
-- Medication administration attestation (#1422): an authorized caregiver can attest a scheduled dose as `Administered`, `Skipped` or `Refused` via `attest_medication_administration`, binding a bounded reason code and an idempotency key. Replays of the same `(pet_id, schedule_id, dose_index, idempotency_key)` are idempotent and return the existing attestation; a conflicting status or reason for the same key raises `MedicationAttestationConflict`. Attestations are rejected for unknown schedules, out-of-range dose indices, expired schedules and oversized/invalid reason codes, and failed calls leave state unchanged. New errors: `MedicationAttestationConflict` (172), `InvalidMedicationReasonCode` (173), `MedicationScheduleNotFound` (174), `MedicationDoseOutOfRange` (175), `MedicationScheduleExpired` (176). New event: `MedicationAttestationEvent` (`pet_id`, `schedule_id`, `dose_index`, `status`, `reason_code`, `caregiver`, `timestamp`). Storage is additive under the existing schema version; see `stellar-contracts/docs/abi-migrations.md`.
 - Contract error compatibility policy (`stellar-contracts/docs/error-compatibility.md`): stable codes, names and retry guidance for every contract error in `stellar-contracts/error-codes.json`, enforced in CI by `scripts/check_error_compat.py` (removed, reused or renumbered codes; new errors need a fixture and changelog entry)
 - Storage-rent and cleanup observability: read-only `get_storage_metrics` reports per-pet quota usage, configured cap, remaining headroom and the soft-deleted medical-record cleanup backlog (counts only, no medical content), scanned in bounded, resumable pages
 - Cross-contract interface compatibility tests: CI deploys the main, ownership/adoption/escrow and vet-registry contracts into one local Soroban environment and checks shared authorization, errors, events and state transitions, with a fixture that fails on signature or enum drift (`stellar-contracts/docs/cross-contract-compat.md`)
@@ -28,8 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Repaired pre-existing `stellar-contracts` build breakage (the crate did not compile at `main`): removed a duplicated `MAX_PREREQUISITES` const and duplicated `ContractError` variants, restored `ProposalNotFound = 47` and `StaleMigration = 169`, added the missing `TrainingMilestone::prerequisites` field, fixed ~20 `safe_increment` call sites, and refreshed the stale ABI snapshot
 - Soroban storage schema migration fixtures: old-version snapshot fixtures for core persistent-storage domains (keys and value shapes) plus fixture-based upgrade/read tests. Current code reads every supported fixture; unsupported schema versions fail with an explicit `UnsupportedSchemaVersion` error instead of a silent misread; migrations are asserted not to widen unbounded values (no unbounded `Vec`/`String` growth). A schema-version CI check guards the fixtures against drift.
 - Soroban batch-operation atomicity policy: batch writes are **all-or-nothing**. A batch is validated and applied as a single unit; if any item fails, the entire batch is rolled back so no partial ownership or consent state is ever observable. Per-item results are returned only on full success (or via a non-mutating preview), and batch size is bounded by a documented maximum (`MAX_BATCH_ITEMS`).
-- Laboratory result amendment workflow (#1431): the originating verified clinic can issue a corrected result via `amend_lab_result`, which stores a new `LabResultAmendment` that links to the original result by `(pet_id, result_id)` and never overwrites it. The original record is marked `Amended` (status only) and remains readable; amendments are append-only, bounded (`MAX_AMENDMENT_REASON_LEN`, `MAX_AMENDMENTS_PER_RESULT`), and replay-safe via a per-result amendment nonce. New errors `LabResultNotFound` (172), `LabResultNotVerified` (173), `AmendmentNotAuthorized` (174), `AmendmentReasonTooLong` (175), `AmendmentLimitReached` (176) and `AmendmentReplay` (177); new event `LabResultAmendedEvent`; storage is additive (no schema bump required).
-- Abnormal-result acknowledgement workflow (#1436): a verified vet can acknowledge an abnormal lab result and record a follow-up disposition (`Pending`, `Scheduled`, `Referred`, `Resolved`) without mutating the measured value. Acknowledgements are keyed by `(pet_id, result_id)`, store the acknowledging vet, timestamp, bounded disposition note and an optional follow-up time, and are idempotent per vet; the measured value, units and reference range are never rewritten. New errors: `ResultNotFound` (172), `ResultNotAbnormal` (173), `AcknowledgementAlreadyExists` (174), `InvalidDispositionNote` (175). New event: `AbnormalResultAcknowledgedEvent`. Storage is additive (new `AbnormalResultAck` key), so no schema bump is required.
 
 ### Changed / Migration notes (certificates, vet credentials, duration safety, idempotency)
 
@@ -59,7 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CertificateExpired` (49), `VetCredentialsExpired` (50),
   `CertificateHashConflict` (51).
   Correction: `CertificateNotFound` is **171**, because 47 is
-  `ProposalNotFou
+  `ProposalNotFound`. These variants were lost in a merge and have been
+  restored (see `stellar-contracts/docs/abi-migrations.md`).
 
 ## [0.1.0] - 2024-XX-XX
 
@@ -67,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Core Pet Management
 
-- Pet registration with unique IDs on the Stellar blockchain
+- Cat registration with unique IDs on the Stellar blockchain
 - Pet profile storage including name, species, and ownership
 - Pet status updates (active/inactive) with owner authentication
 - Pet information retrieval by ID
@@ -114,7 +106,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Encryption for sensitive pet and owner fields
 - Deterministic key derivation using domain separator and contract address
-- **Nonce uniqueness fix**: replaced fixed `[0u8; 12]` nonce with ti
+- **Nonce uniqueness fix**: replaced fixed `[0u8; 12]` nonce with timestamp + counter based unique nonces to prevent replay attacks
+- Decryption system with privacy level enforcement
+- Input validation for all public functions
+- Overflow protection on arithmetic operations
 
 #### Emergency & Dispute Systems
 
@@ -124,36 +119,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Transfer & Ownership
 
-- Pet transfer functionality with ownership validation
-- Ownership history tracking
-- Transfer event emission
+- Cat transfer functionality with ownership updates
+- Multisig transfer support for enhanced security
+- Pet adoption workflow support
 
-#### Care-Plan Review
+#### Vet Registry
 
-- Care-plan review workflow with scheduled review dates
-- Review status tracking and completion records
+- Vet registration and verification system
+- Vet information storage and retrieval
 
-#### Medication Attestation
+#### Behavior & Nutrition Tracking
 
-- Medication attestation records with attesting party and timestamp
-- Attestation history retrieval per pet
+- Pet behavior logging and history
+- Nutrition tracking and records management
 
-#### Preventive-Care Schedules
+#### Data & Storage
 
-- Preventive-care schedule definitions per pet
-- Schedule tracking with due-date reminders
+- IPFS integration for off-chain data storage
+- Attachment support for linking external files
+- Efficient on-chain storage patterns with optimized data structures
+- Statistics aggregation for pet data insights
 
-#### Allergy Conflict Detection
+#### Governance & Upgrades
 
-- Allergy conflict detection across medications and treatments
-- Conflict reporting for flagged allergy interactions
+- Upgrade proposal system for contract improvements
+- Admin initialization and management
 
-#### Certificates
+#### Backend Services
 
-- `anchor_certificate_idempotent` provides replay-safe certificate anchoring:
-  re-submitting the same `(pet_id, vaccination_id, cert_hash)` returns the
-  existing `cert_id`; a conflicting hash raises `CertificateHashConflict`.
-- New errors: `CertificateNotFound` (171), `CertificateRevoked` (48),
-  `CertificateExpired` (49), `VetCredentialsExpired` (50),
-  `CertificateHashConflict` (51).
+- Configurable TOTP-based Two-Factor Authentication (2FA)
+- Cryptographic agility (SHA1/SHA256/SHA512, 6/8 digits, custom periods)
+- QR code generation for authenticator apps
+- 8 backup codes generation with recovery mechanism
+- Rate limiting support
+- Database schema for 2FA data persistence
 
+#### Testing
+
+- Comprehensive test suite with 43+ tests covering all 13 public contract functions
+- 100% function coverage
+- Decryption test suite with 21 tests for privacy enforcement and error handling
+- Encryption nonce tests with 8 test cases for uniqueness and format validation
+- Gas optimization benchmarks
+- Insurance comprehensive tests
+- Edge case and error condition testing
+
+#### Documentation
+
+- API reference documentation for all contract functions
+- Grooming API reference
+- Insurance API reference
+- Development setup guide
+- Contributing guidelines
+- Security policy with vulnerability reporting process
+- Gas optimization report with benchmark results
+- Test documentation and coverage summaries
+
+#### CI/CD & Tooling
+
+- `.gitignore` configured for Rust/Stellar project
+- Development and configuration guides
+
+### Changed
+
+#### Gas Optimization
+
+- Storage pattern optimization: single storage instance reused across operations, batched storage writes
+- Loop optimization for vaccination history functions (40-60% gas reduction)
+- Access control function inlining (25-30% reduction)
+- Vector pre-allocation for known sizes
+- Timestamp and storage instance caching
+- **Overall average gas savings: 30-40%** across all operations
+
+### Fixed
+
+- **Critical cryptographic vulnerability**: Fixed fixed-nonce encryption in `encrypt_sensitive_data` that enabled replay attacks, dictionary attacks, and information leakage. Now uses ledger timestamp + persistent counter for unique 12-byte nonces.
+- Input limit validations for public functions
+- Proper error handling for invalid pet IDs and missing records
+
+### Security
+
+- 

@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_setup_two_factor_default() {
-        let result = TwoFactorAuth::setup("test@petchain.com", "PetChain");
+        let result = TwoFactorAuth::setup("test@catchain.com", "CatChain");
         assert!(result.is_ok());
         let setup = result.unwrap();
         assert!(!setup.secret.is_empty());
@@ -142,9 +142,9 @@ mod tests {
         assert_eq!(setup.config.algorithm, Algorithm::SHA1);
         assert!(setup
             .otpauth_uri
-            .starts_with("otpauth://totp/PetChain:test%40petchain.com?"));
+            .starts_with("otpauth://totp/CatChain:test%40catchain.com?"));
         assert!(setup.otpauth_uri.contains("secret="));
-        assert!(setup.otpauth_uri.contains("&issuer=PetChain"));
+        assert!(setup.otpauth_uri.contains("&issuer=CatChain"));
         assert!(setup.otpauth_uri.contains("&algorithm=SHA1"));
         assert!(setup.otpauth_uri.contains("&digits=6"));
         assert!(setup.otpauth_uri.contains("&period=30"));
@@ -196,7 +196,7 @@ mod tests {
     fn test_setup_two_factor_with_sha1_config() {
         let config = TotpConfig::legacy_sha1();
         let result =
-            TwoFactorAuth::setup_with_config("test@petchain.com", "PetChain", config.clone());
+            TwoFactorAuth::setup_with_config("test@catchain.com", "CatChain", config.clone());
         assert!(result.is_ok());
 
         let setup = result.unwrap();
@@ -210,7 +210,7 @@ mod tests {
     fn test_setup_two_factor_with_sha512_config() {
         let config = TotpConfig::high_security();
         let result =
-            TwoFactorAuth::setup_with_config("test@petchain.com", "PetChain", config.clone());
+            TwoFactorAuth::setup_with_config("test@catchain.com", "CatChain", config.clone());
         assert!(result.is_ok());
 
         let setup = result.unwrap();
@@ -227,7 +227,7 @@ mod tests {
         let config = TotpConfig::default();
         assert_eq!(config.backup_code_count, 8);
         let result =
-            TwoFactorAuth::setup_with_config("test@petchain.com", "PetChain", config.clone());
+            TwoFactorAuth::setup_with_config("test@catchain.com", "CatChain", config.clone());
         assert!(result.is_ok());
         let setup = result.unwrap();
         assert_eq!(setup.backup_codes.len(), 8);
@@ -239,7 +239,7 @@ mod tests {
         let mut config = TotpConfig::default();
         config.backup_code_count = 12;
         let result =
-            TwoFactorAuth::setup_with_config("test@petchain.com", "PetChain", config.clone());
+            TwoFactorAuth::setup_with_config("test@catchain.com", "CatChain", config.clone());
         assert!(result.is_ok());
         let setup = result.unwrap();
         assert_eq!(setup.backup_codes.len(), 12);
@@ -436,7 +436,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "persist@petchain.com".to_string(),
+                email: "persist@catchain.com".to_string(),
             },
         )
         .expect("enable_two_factor should succeed");
@@ -478,7 +478,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "overwrite@petchain.com".to_string(),
+                email: "overwrite@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -488,7 +488,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "overwrite@petchain.com".to_string(),
+                email: "overwrite@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -508,7 +508,7 @@ mod tests {
         let user_id = "user-idempotent";
         let req = EnableTwoFactorRequest {
             user_id: user_id.to_string(),
-            email: "idempotent@petchain.com".to_string(),
+            email: "idempotent@catchain.com".to_string(),
             idempotency_key: Some("retry-key-1".to_string()),
         };
 
@@ -531,7 +531,7 @@ mod tests {
             &caller(user_id),
             EnableTwoFactorRequest {
                 user_id: user_id.to_string(),
-                email: "idempotent2@petchain.com".to_string(),
+                email: "idempotent2@catchain.com".to_string(),
                 idempotency_key: Some("key-a".to_string()),
             },
         )
@@ -545,7 +545,7 @@ mod tests {
             &caller(user_id),
             EnableTwoFactorRequest {
                 user_id: user_id.to_string(),
-                email: "idempotent2@petchain.com".to_string(),
+                email: "idempotent2@catchain.com".to_string(),
                 idempotency_key: Some("key-b".to_string()),
             },
         )
@@ -573,7 +573,7 @@ mod tests {
             &caller(user_id),
             EnableTwoFactorRequest {
                 user_id: user_id.to_string(),
-                email: "user1@petchain.com".to_string(),
+                email: "user1@catchain.com".to_string(),
                 idempotency_key: None,
             },
         );
@@ -584,7 +584,7 @@ mod tests {
             &caller(user_id),
             EnableTwoFactorRequest {
                 user_id: user_id.to_string(),
-                email: "user2@petchain.com".to_string(),
+                email: "user2@catchain.com".to_string(),
                 idempotency_key: None,
             },
         );
@@ -595,7 +595,7 @@ mod tests {
             &caller(user_id),
             EnableTwoFactorRequest {
                 user_id: user_id.to_string(),
-                email: "user3@petchain.com".to_string(),
+                email: "user3@catchain.com".to_string(),
                 idempotency_key: None,
             },
         );
@@ -628,7 +628,7 @@ mod tests {
                 &caller(user_id),
                 EnableTwoFactorRequest {
                     user_id: user_id.to_string(),
-                    email: format!("user{}@petchain.com", i),
+                    email: format!("user{}@catchain.com", i),
                     idempotency_key: None,
                 },
             );
@@ -646,7 +646,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: "victim".to_string(),
-                email: "victim@petchain.com".to_string(),
+                email: "victim@catchain.com".to_string(),
             },
         );
 
@@ -688,7 +688,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "activate@petchain.com".to_string(),
+                email: "activate@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -722,7 +722,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "no-partial@petchain.com".to_string(),
+                email: "no-partial@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -793,7 +793,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "enabled@petchain.com".to_string(),
+                email: "enabled@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -1560,7 +1560,7 @@ mod tests {
                 EnableTwoFactorRequest {
                     idempotency_key: None,
                     user_id: "user-1".to_string(),
-                    email: "user1@petchain.com".to_string(),
+                    email: "user1@catchain.com".to_string(),
                 },
             );
             assert!(
@@ -1576,7 +1576,7 @@ mod tests {
                 EnableTwoFactorRequest {
                     idempotency_key: None,
                     user_id: "user-2".to_string(),
-                    email: "user2@petchain.com".to_string(),
+                    email: "user2@catchain.com".to_string(),
                 },
             );
             assert!(result.is_err());
@@ -1719,7 +1719,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "u1@petchain.com".to_string(),
+                email: "u1@catchain.com".to_string(),
             },
         );
         assert!(resp.is_ok());
@@ -1755,7 +1755,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "u2@petchain.com".to_string(),
+                email: "u2@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -1783,7 +1783,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "u3@petchain.com".to_string(),
+                email: "u3@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -1810,7 +1810,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "u6@petchain.com".to_string(),
+                email: "u6@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -1836,7 +1836,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "u8@petchain.com".to_string(),
+                email: "u8@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -1871,7 +1871,7 @@ mod tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "u9@petchain.com".to_string(),
+                email: "u9@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -1945,7 +1945,7 @@ mod integration_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "user1@petchain.com".to_string(),
+                email: "user1@catchain.com".to_string(),
             },
         )
         .expect("enable should succeed");
@@ -2029,7 +2029,7 @@ mod integration_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "recover@petchain.com".to_string(),
+                email: "recover@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -2133,7 +2133,7 @@ mod integration_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "rotation@petchain.com".to_string(),
+                email: "rotation@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -2253,7 +2253,7 @@ mod integration_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "rate-limit-login@petchain.com".to_string(),
+                email: "rate-limit-login@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -2313,7 +2313,7 @@ mod integration_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "user4@petchain.com".to_string(),
+                email: "user4@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -2363,7 +2363,7 @@ mod integration_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "reset-rate@petchain.com".to_string(),
+                email: "reset-rate@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -2524,7 +2524,7 @@ mod integration_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "user@petchain.com".to_string(),
+                email: "user@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -2567,7 +2567,7 @@ mod integration_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "user@petchain.com".to_string(),
+                email: "user@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -2623,7 +2623,7 @@ mod integration_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "user@petchain.com".to_string(),
+                email: "user@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -2679,7 +2679,7 @@ mod integration_tests {
                 EnableTwoFactorRequest {
                     idempotency_key: None,
                     user_id: user_id.clone(),
-                    email: format!("{}@petchain.com", user_id),
+                    email: format!("{}@catchain.com", user_id),
                 },
             )
             .unwrap();
@@ -2733,7 +2733,7 @@ mod integration_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "user@petchain.com".to_string(),
+                email: "user@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -3930,7 +3930,7 @@ mod canary_tests {
             &admin(),
             CreateCanaryRequest {
                 user_id: "canary-001".to_string(),
-                email: "canary@petchain.com".to_string(),
+                email: "canary@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -3951,7 +3951,7 @@ mod canary_tests {
             &admin(),
             CreateCanaryRequest {
                 user_id: "canary-002".to_string(),
-                email: "canary2@petchain.com".to_string(),
+                email: "canary2@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -3986,7 +3986,7 @@ mod canary_tests {
             &admin(),
             CreateCanaryRequest {
                 user_id: "canary-003".to_string(),
-                email: "canary3@petchain.com".to_string(),
+                email: "canary3@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -4012,7 +4012,7 @@ mod canary_tests {
             &admin(),
             CreateCanaryRequest {
                 user_id: "canary-004".to_string(),
-                email: "canary4@petchain.com".to_string(),
+                email: "canary4@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -4902,7 +4902,7 @@ mod tenant_provisioning_idempotency_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "user@petchain.com".to_string(),
+                email: "user@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -4994,8 +4994,8 @@ mod property_tests {
             for &window in &WINDOWS {
                 let config = TotpConfig::new(algorithm, 6, 30, window).expect("valid config");
                 let setup = TwoFactorAuth::setup_with_config(
-                    "prop@petchain.com",
-                    "PetChain",
+                    "prop@catchain.com",
+                    "CatChain",
                     config.clone(),
                 )
                 .unwrap_or_else(|e| {
@@ -5047,7 +5047,7 @@ mod property_tests {
         for &algorithm in &ALGORITHMS {
             let config = TotpConfig::new(algorithm, 8, 30, 1).unwrap();
             let setup =
-                TwoFactorAuth::setup_with_config("8dig@petchain.com", "PetChain", config.clone())
+                TwoFactorAuth::setup_with_config("8dig@catchain.com", "CatChain", config.clone())
                     .unwrap();
             let totp = TOTP::new(
                 algorithm,
@@ -5484,7 +5484,7 @@ mod algorithm_upgrade_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "upgrade@petchain.com".to_string(),
+                email: "upgrade@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -5567,7 +5567,7 @@ mod algorithm_upgrade_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "upgrade2@petchain.com".to_string(),
+                email: "upgrade2@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -5620,7 +5620,7 @@ mod algorithm_upgrade_tests {
         };
 
         let setup =
-            TwoFactorAuth::setup_with_config("already@petchain.com", "PetChain", config).unwrap();
+            TwoFactorAuth::setup_with_config("already@catchain.com", "CatChain", config).unwrap();
 
         overwrite_two_factor_data_for_tests(
             user_id,
@@ -5674,7 +5674,7 @@ mod algorithm_upgrade_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "not-enabled@petchain.com".to_string(),
+                email: "not-enabled@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -5731,7 +5731,7 @@ mod algorithm_upgrade_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "unauth@petchain.com".to_string(),
+                email: "unauth@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -5775,7 +5775,7 @@ mod algorithm_upgrade_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "newcodes@petchain.com".to_string(),
+                email: "newcodes@catchain.com".to_string(),
             },
         )
         .unwrap();
@@ -5839,7 +5839,7 @@ mod algorithm_upgrade_tests {
             EnableTwoFactorRequest {
                 idempotency_key: None,
                 user_id: user_id.to_string(),
-                email: "invalid@petchain.com".to_string(),
+                email: "invalid@catchain.com".to_string(),
             },
         )
         .unwrap();

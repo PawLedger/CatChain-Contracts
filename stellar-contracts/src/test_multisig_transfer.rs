@@ -1,10 +1,10 @@
-use crate::{Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species};
+use crate::{Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species};
 use soroban_sdk::{testutils::{Address as _, Events}, Address, Env, String, Vec};
 
 fn setup_test_env<'a>(
     env: &'a Env,
 ) -> (
-    PetChainContractClient<'a>,
+    CatChainContractClient<'a>,
     Address,
     Address,
     Address,
@@ -12,8 +12,8 @@ fn setup_test_env<'a>(
 ) {
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(env, &contract_id);
 
     let owner = Address::generate(env);
     let signer1 = Address::generate(env);
@@ -25,13 +25,13 @@ fn setup_test_env<'a>(
     (client, owner, signer1, signer2, new_owner)
 }
 
-fn register_test_pet(client: &PetChainContractClient, env: &Env, owner: &Address) -> u64 {
+fn register_test_pet(client: &CatChainContractClient, env: &Env, owner: &Address) -> u64 {
     client.register_pet(
         owner,
         &String::from_str(env, "TestPet"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Labrador"),
         &String::from_str(env, "Golden"),
         &30,
@@ -543,7 +543,7 @@ fn test_batch_transfer_rejects_owner_mismatch_atomically() {
         &String::from_str(&env, "Rover"),
         &String::from_str(&env, "2020-06-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Mix"),
         &String::from_str(&env, "Brown"),
         &15,
@@ -572,7 +572,7 @@ fn test_batch_transfer_rejects_batches_over_limit() {
             &String::from_str(&env, "BatchPet"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Breed"),
             &String::from_str(&env, "Black"),
             &20,
@@ -797,8 +797,8 @@ fn test_get_active_transfer_proposals_per_pet_isolation() {
 fn test_set_threshold_valid() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let admin1 = Address::generate(&env);
     let admin2 = Address::generate(&env);
     let mut admins = Vec::new(&env);
@@ -815,8 +815,8 @@ fn test_set_threshold_valid() {
 fn test_set_threshold_zero_rejected() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let admin1 = Address::generate(&env);
     let mut admins = Vec::new(&env);
     admins.push_back(admin1.clone());
@@ -829,8 +829,8 @@ fn test_set_threshold_zero_rejected() {
 fn test_set_threshold_exceeds_signer_count_rejected() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let admin1 = Address::generate(&env);
     let mut admins = Vec::new(&env);
     admins.push_back(admin1.clone());
@@ -843,8 +843,8 @@ fn test_set_threshold_exceeds_signer_count_rejected() {
 fn test_set_threshold_blocked_by_active_proposal() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let admin1 = Address::generate(&env);
     let admin2 = Address::generate(&env);
     let mut admins = Vec::new(&env);

@@ -9,8 +9,8 @@ fn test_set_and_get_diet_plan() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -18,7 +18,7 @@ fn test_set_and_get_diet_plan() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &25u32,
@@ -59,8 +59,8 @@ fn test_weight_entries_and_pet_update() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -93,8 +93,8 @@ fn test_get_medications_pagination() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     let owner = Address::generate(&env);
@@ -107,7 +107,7 @@ fn test_get_medications_pagination() {
         &String::from_str(&env, "Rex"),
         &String::from_str(&env, "2019-05-10"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &30u32,
@@ -191,8 +191,8 @@ fn test_get_active_medications_filter() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     let owner = Address::generate(&env);
@@ -267,8 +267,8 @@ fn test_discontinue_medication() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     let owner = Address::generate(&env);
@@ -281,7 +281,7 @@ fn test_discontinue_medication() {
         &String::from_str(&env, "Rex"),
         &String::from_str(&env, "2019-05-10"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &30u32,
@@ -321,8 +321,8 @@ fn test_get_diet_plan_count() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -330,7 +330,7 @@ fn test_get_diet_plan_count() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &25u32,
@@ -379,8 +379,8 @@ fn test_log_feeding_updates_daily_summary() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -388,7 +388,7 @@ fn test_log_feeding_updates_daily_summary() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &25u32,
@@ -433,8 +433,8 @@ fn test_get_weight_entry_count_zero_for_new_pet() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -442,7 +442,7 @@ fn test_get_weight_entry_count_zero_for_new_pet() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &25u32,
@@ -459,8 +459,8 @@ fn test_get_weight_entry_count_increments_on_add() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -468,7 +468,7 @@ fn test_get_weight_entry_count_increments_on_add() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &25u32,
@@ -493,8 +493,8 @@ fn test_get_weight_entry_by_id() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -502,7 +502,7 @@ fn test_get_weight_entry_by_id() {
         &String::from_str(&env, "Bolt"),
         &String::from_str(&env, "2022-06-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Husky"),
         &String::from_str(&env, "White"),
         &20u32,
@@ -531,8 +531,8 @@ fn test_get_weight_entry_nonexistent_returns_none() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     // No entries added — ID 999 should return None
     let result = client.get_weight_entry(&999u64);
@@ -546,8 +546,8 @@ fn test_set_nutrition_version_creates_version() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -555,7 +555,7 @@ fn test_set_nutrition_version_creates_version() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &25u32,
@@ -594,8 +594,8 @@ fn test_nutrition_version_history_preserved() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -664,8 +664,8 @@ fn test_list_nutrition_versions_returns_all_versions() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -673,7 +673,7 @@ fn test_list_nutrition_versions_returns_all_versions() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2019-05-15"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &30u32,
@@ -723,8 +723,8 @@ fn test_rollback_nutrition_restores_correct_state() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -732,7 +732,7 @@ fn test_rollback_nutrition_restores_correct_state() {
         &String::from_str(&env, "Charlie"),
         &String::from_str(&env, "2018-07-10"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Beagle"),
         &String::from_str(&env, "Brown"),
         &15u32,
@@ -805,8 +805,8 @@ fn test_nutrition_version_pruning_at_limit() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -814,7 +814,7 @@ fn test_nutrition_version_pruning_at_limit() {
         &String::from_str(&env, "Daisy"),
         &String::from_str(&env, "2017-09-22"),
         &Gender::Female,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Poodle"),
         &String::from_str(&env, "White"),
         &12u32,
@@ -877,8 +877,8 @@ fn test_get_current_nutrition_version_returns_active() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -886,7 +886,7 @@ fn test_get_current_nutrition_version_returns_active() {
         &String::from_str(&env, "Rocky"),
         &String::from_str(&env, "2016-11-08"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "German Shepherd"),
         &String::from_str(&env, "Brown"),
         &35u32,
@@ -939,8 +939,8 @@ fn test_nutrition_version_nonexistent_pet_returns_none() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     // Try to get version for non-existent pet
     let result = client.get_nutrition_version(&999u64, &1u64);
@@ -959,8 +959,8 @@ fn test_rollback_to_nonexistent_version_fails() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -1000,8 +1000,8 @@ fn test_nutrition_version_with_restrictions_and_allergies() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -1009,7 +1009,7 @@ fn test_nutrition_version_with_restrictions_and_allergies() {
         &String::from_str(&env, "Milo"),
         &String::from_str(&env, "2014-04-30"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Bulldog"),
         &String::from_str(&env, "Fawn"),
         &20u32,
@@ -1056,8 +1056,8 @@ fn test_multiple_rollbacks_create_new_versions() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(

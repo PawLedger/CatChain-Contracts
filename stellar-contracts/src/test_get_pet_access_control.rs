@@ -8,7 +8,7 @@
 #[cfg(test)]
 mod test_get_pet_access_control {
     use crate::{
-        AccessLevel, Gender, PetChainContract, PetChainContractClient, PetData, PrivacyLevel,
+        AccessLevel, Gender, CatChainContract, CatChainContractClient, PetData, PrivacyLevel,
         Species,
     };
     use soroban_sdk::{
@@ -18,16 +18,16 @@ mod test_get_pet_access_control {
 
     // ---- helpers ----
 
-    fn setup() -> (Env, PetChainContractClient<'static>) {
+    fn setup() -> (Env, CatChainContractClient<'static>) {
         let env = Env::default();
         env.mock_all_auths();
-        let id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &id);
+        let id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &id);
         (env, client)
     }
 
     fn register(
-        client: &PetChainContractClient,
+        client: &CatChainContractClient,
         env: &Env,
         owner: &Address,
         privacy: PrivacyLevel,
@@ -37,7 +37,7 @@ mod test_get_pet_access_control {
             &String::from_str(env, "Buddy"),
             &String::from_str(env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(env, "Labrador"),
             &String::from_str(env, "Brown"),
             &25u32,
@@ -260,7 +260,7 @@ mod test_get_pet_access_control {
         assert!(result.is_some());
         let data = result.unwrap();
         assert_eq!(data.name, String::from_str(&env, "Buddy"));
-        assert_eq!(data.species, String::from_str(&env, "Dog"));
+        assert_eq!(data.species, String::from_str(&env, "Cat"));
     }
 
     #[test]

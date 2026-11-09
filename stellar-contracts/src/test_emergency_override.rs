@@ -18,8 +18,8 @@ fn valid_contacts(env: &Env) -> Vec<EmergencyContact> {
 fn test_owner_can_read_emergency_info() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -27,7 +27,7 @@ fn test_owner_can_read_emergency_info() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &25u32,
@@ -55,7 +55,7 @@ fn test_owner_can_read_emergency_info() {
     // Owner can always read their own emergency info
     let info = client.get_emergency_info(&pet_id, &owner);
     assert_eq!(info.pet_id, pet_id);
-    assert_eq!(info.species, String::from_str(&env, "Dog"));
+    assert_eq!(info.species, String::from_str(&env, "Cat"));
     assert_eq!(info.emergency_contacts.len(), 1);
     assert_eq!(
         info.emergency_contacts.get(0).unwrap().phone,
@@ -67,8 +67,8 @@ fn test_owner_can_read_emergency_info() {
 fn test_approved_responder_can_read_emergency_info() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let responder = Address::generate(&env);
@@ -77,7 +77,7 @@ fn test_approved_responder_can_read_emergency_info() {
         &String::from_str(&env, "Rex"),
         &String::from_str(&env, "2019-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Boxer"),
         &String::from_str(&env, "Brindle"),
         &30u32,
@@ -115,8 +115,8 @@ fn test_approved_responder_can_read_emergency_info() {
 fn test_unauthorized_address_cannot_read_emergency_info() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let stranger = Address::generate(&env);
@@ -150,8 +150,8 @@ fn test_unauthorized_address_cannot_read_emergency_info() {
 fn test_revoked_responder_cannot_read_emergency_info() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let responder = Address::generate(&env);
@@ -161,7 +161,7 @@ fn test_revoked_responder_cannot_read_emergency_info() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &28u32,
@@ -187,8 +187,8 @@ fn test_revoked_responder_cannot_read_emergency_info() {
 fn test_emergency_data_filtering() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let contacts = valid_contacts(&env);
@@ -197,7 +197,7 @@ fn test_emergency_data_filtering() {
         &String::from_str(&env, "Rex"),
         &String::from_str(&env, "2019-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Boxer"),
         &String::from_str(&env, "Brindle"),
         &30u32,
@@ -240,8 +240,8 @@ fn test_emergency_data_filtering() {
 fn test_emergency_override_writes_audit_entry() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let responder = Address::generate(&env);
@@ -250,7 +250,7 @@ fn test_emergency_override_writes_audit_entry() {
         &String::from_str(&env, "Rex"),
         &String::from_str(&env, "2019-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Boxer"),
         &String::from_str(&env, "Brindle"),
         &30u32,
@@ -278,8 +278,8 @@ fn test_emergency_override_writes_audit_entry() {
 fn test_emergency_audit_pagination_and_cap() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let responder = Address::generate(&env);
@@ -319,8 +319,8 @@ fn test_emergency_audit_pagination_and_cap() {
 fn test_admin_can_view_any_emergency_audit() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     client.init_admin(&admin);
@@ -330,7 +330,7 @@ fn test_admin_can_view_any_emergency_audit() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &28u32,
@@ -354,8 +354,8 @@ fn test_admin_can_view_any_emergency_audit() {
 fn test_unauthorized_emergency_audit_rejected() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let stranger = Address::generate(&env);
@@ -379,8 +379,8 @@ fn test_unauthorized_emergency_audit_rejected() {
 fn test_owner_can_retrieve_emergency_access_logs() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -388,7 +388,7 @@ fn test_owner_can_retrieve_emergency_access_logs() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &25u32,
@@ -427,8 +427,8 @@ fn test_owner_can_retrieve_emergency_access_logs() {
 fn test_non_owner_cannot_retrieve_emergency_access_logs() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let stranger = Address::generate(&env);
@@ -461,8 +461,8 @@ fn test_non_owner_cannot_retrieve_emergency_access_logs() {
 fn test_responder_cannot_retrieve_emergency_access_logs() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let responder = Address::generate(&env);
@@ -471,7 +471,7 @@ fn test_responder_cannot_retrieve_emergency_access_logs() {
         &String::from_str(&env, "Rex"),
         &String::from_str(&env, "2019-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Boxer"),
         &String::from_str(&env, "Brindle"),
         &30u32,
@@ -511,8 +511,8 @@ fn test_responder_cannot_retrieve_emergency_access_logs() {
 fn test_get_emergency_access_logs_nonexistent_pet() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let nonexistent_pet_id = 99999u64;
@@ -525,8 +525,8 @@ fn test_get_emergency_access_logs_nonexistent_pet() {
 fn test_emergency_access_logs_contain_correct_data() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let pet_id = client.register_pet(
@@ -534,7 +534,7 @@ fn test_emergency_access_logs_contain_correct_data() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &25u32,
@@ -578,8 +578,8 @@ fn test_emergency_access_logs_contain_correct_data() {
 fn test_add_emergency_responder_writes_access_log() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let responder = Address::generate(&env);
@@ -588,7 +588,7 @@ fn test_add_emergency_responder_writes_access_log() {
         &String::from_str(&env, "Rex"),
         &String::from_str(&env, "2019-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Boxer"),
         &String::from_str(&env, "Brindle"),
         &30u32,
@@ -623,8 +623,8 @@ fn test_add_emergency_responder_writes_access_log() {
 fn test_remove_emergency_responder_writes_access_log() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let responder = Address::generate(&env);
@@ -633,7 +633,7 @@ fn test_remove_emergency_responder_writes_access_log() {
         &String::from_str(&env, "Rex"),
         &String::from_str(&env, "2019-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Boxer"),
         &String::from_str(&env, "Brindle"),
         &30u32,
@@ -671,8 +671,8 @@ fn test_remove_emergency_responder_writes_access_log() {
 fn test_admin_can_read_emergency_access_audit_log() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     client.init_admin(&admin);
@@ -684,7 +684,7 @@ fn test_admin_can_read_emergency_access_audit_log() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &28u32,
@@ -711,8 +711,8 @@ fn test_admin_can_read_emergency_access_audit_log() {
 fn test_stranger_cannot_read_emergency_access_audit_log() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     let stranger = Address::generate(&env);
@@ -721,7 +721,7 @@ fn test_stranger_cannot_read_emergency_access_audit_log() {
         &String::from_str(&env, "Buddy"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &28u32,

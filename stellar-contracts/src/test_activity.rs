@@ -8,16 +8,16 @@ mod test_activity {
         env.mock_all_auths();
         env.budget().reset_unlimited();
 
-        let contract_id = env.register_contract(None, PetChainContract);
+        let contract_id = env.register_contract(None, CatChainContract);
 
         let owner = Address::generate(&env);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let client = CatChainContractClient::new(&env, &contract_id);
         let pet_id = client.register_pet(
             &owner,
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Retriever"),
             &PrivacyLevel::Public,
         );
@@ -28,7 +28,7 @@ mod test_activity {
     #[test]
     fn test_bbox_query_returns_subset() {
         let (env, contract_id, _owner, pet_id) = setup();
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let first = client.add_activity_record(
             &pet_id,
@@ -72,7 +72,7 @@ mod test_activity {
     #[should_panic(expected = "Latitude out of range")]
     fn test_out_of_range_coordinates_rejected() {
         let (env, contract_id, _owner, pet_id) = setup();
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         client.add_activity_record(
             &pet_id,
@@ -87,7 +87,7 @@ mod test_activity {
     #[should_panic(expected = "Coordinates cannot be zero")]
     fn test_zero_coordinate_rejected() {
         let (env, contract_id, _owner, pet_id) = setup();
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         client.add_activity_record(
             &pet_id,
@@ -100,7 +100,7 @@ mod test_activity {
 }
 
 use crate::{
-    ActivityType, Gender, PetChainContract, PetChainContractClient, PrivacyLevel, Species,
+    ActivityType, Gender, CatChainContract, CatChainContractClient, PrivacyLevel, Species,
     TreatmentType,
 };
 use soroban_sdk::{
@@ -113,8 +113,8 @@ fn test_add_activity_record() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -124,7 +124,7 @@ fn test_add_activity_record() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -149,8 +149,8 @@ fn test_get_treatment_count_returns_total_for_pet() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     let owner = Address::generate(&env);
@@ -162,7 +162,7 @@ fn test_get_treatment_count_returns_total_for_pet() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -207,8 +207,8 @@ fn test_get_activity_history() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -218,7 +218,7 @@ fn test_get_activity_history() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -255,8 +255,8 @@ fn test_activity_stats() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -266,7 +266,7 @@ fn test_activity_stats() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -302,8 +302,8 @@ fn test_multiple_activity_types() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -313,7 +313,7 @@ fn test_multiple_activity_types() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -367,8 +367,8 @@ fn test_add_activity_nonexistent_pet() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -389,8 +389,8 @@ fn test_invalid_intensity() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -400,7 +400,7 @@ fn test_invalid_intensity() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -423,8 +423,8 @@ fn test_activity_stats_empty() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -434,7 +434,7 @@ fn test_activity_stats_empty() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -452,8 +452,8 @@ fn test_archive_pet() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -463,7 +463,7 @@ fn test_archive_pet() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -490,8 +490,8 @@ fn test_unarchive_pet() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -501,7 +501,7 @@ fn test_unarchive_pet() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -524,8 +524,8 @@ fn test_archive_decrements_active_count() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -556,8 +556,8 @@ fn test_archive_nonexistent_pet() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -568,7 +568,7 @@ fn test_archive_nonexistent_pet() {
 // ── get_activity_summary tests ────────────────────────────────────────────────
 
 /// Helper: register a pet and return its id.
-fn setup_pet(env: &Env, client: &PetChainContractClient) -> u64 {
+fn setup_pet(env: &Env, client: &CatChainContractClient) -> u64 {
     let owner = Address::generate(env);
     client.init_admin(&owner);
     client.register_pet(
@@ -576,7 +576,7 @@ fn setup_pet(env: &Env, client: &PetChainContractClient) -> u64 {
         &String::from_str(env, "Max"),
         &String::from_str(env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(env, "Golden Retriever"),
         &String::from_str(env, "Golden"),
         &30,
@@ -592,8 +592,8 @@ fn test_activity_summary_valid_range() {
     env.mock_all_auths();
     env.ledger().with_mut(|l| l.timestamp = 1_000);
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let pet_id = setup_pet(&env, &client);
 
     // Both records land at timestamp 1_000 (current ledger time).
@@ -625,8 +625,8 @@ fn test_activity_summary_partial_overlap() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     // Record 1 at t=100
     env.ledger().with_mut(|l| l.timestamp = 100);
@@ -664,8 +664,8 @@ fn test_activity_summary_empty_range() {
     env.mock_all_auths();
     env.ledger().with_mut(|l| l.timestamp = 9999);
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let pet_id = setup_pet(&env, &client);
 
     client.add_activity_record(
@@ -690,8 +690,8 @@ fn test_activity_summary_single_activity_on_boundary() {
     env.mock_all_auths();
     env.ledger().with_mut(|l| l.timestamp = 500);
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let pet_id = setup_pet(&env, &client);
 
     client.add_activity_record(
@@ -721,8 +721,8 @@ fn test_activity_summary_invalid_range() {
     env.mock_all_auths();
     env.ledger().with_mut(|l| l.timestamp = 1000);
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
     let pet_id = setup_pet(&env, &client);
 
     client.add_activity_record(
@@ -744,8 +744,8 @@ fn test_get_activity_record_by_id_returns_correct_record() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -755,7 +755,7 @@ fn test_get_activity_record_by_id_returns_correct_record() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -786,8 +786,8 @@ fn test_get_activity_record_by_id_returns_none_for_nonexistent() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -803,8 +803,8 @@ fn test_streak_increments_on_consecutive_days() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -814,7 +814,7 @@ fn test_streak_increments_on_consecutive_days() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -878,8 +878,8 @@ fn test_streak_resets_on_gap_greater_than_one_day() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -889,7 +889,7 @@ fn test_streak_resets_on_gap_greater_than_one_day() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -934,8 +934,8 @@ fn test_milestone_event_at_7_days() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -945,7 +945,7 @@ fn test_milestone_event_at_7_days() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -981,8 +981,8 @@ fn test_milestone_event_at_30_days() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -992,7 +992,7 @@ fn test_milestone_event_at_30_days() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1028,8 +1028,8 @@ fn test_milestone_event_at_100_days() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1039,7 +1039,7 @@ fn test_milestone_event_at_100_days() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1075,8 +1075,8 @@ fn test_longest_streak_tracking() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1086,7 +1086,7 @@ fn test_longest_streak_tracking() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1160,8 +1160,8 @@ fn test_get_current_streak() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1171,7 +1171,7 @@ fn test_get_current_streak() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1200,8 +1200,8 @@ fn test_get_longest_streak() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1211,7 +1211,7 @@ fn test_get_longest_streak() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1240,8 +1240,8 @@ fn test_same_day_activity_no_streak_change() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1251,7 +1251,7 @@ fn test_same_day_activity_no_streak_change() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1291,8 +1291,8 @@ fn test_milestone_not_reached_before_threshold() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1302,7 +1302,7 @@ fn test_milestone_not_reached_before_threshold() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1338,8 +1338,8 @@ fn test_multiple_milestones_reached() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1349,7 +1349,7 @@ fn test_multiple_milestones_reached() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1386,8 +1386,8 @@ fn test_streak_with_multiple_pets() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1397,7 +1397,7 @@ fn test_streak_with_multiple_pets() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1466,8 +1466,8 @@ fn test_streak_persistence_across_calls() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1477,7 +1477,7 @@ fn test_streak_persistence_across_calls() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1508,8 +1508,8 @@ fn test_streak_after_gap_resets_to_one() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1519,7 +1519,7 @@ fn test_streak_after_gap_resets_to_one() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1573,8 +1573,8 @@ fn test_milestone_events_not_duplicated() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1584,7 +1584,7 @@ fn test_milestone_events_not_duplicated() {
         &String::from_str(&env, "Max"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Golden Retriever"),
         &String::from_str(&env, "Golden"),
         &30,
@@ -1638,8 +1638,8 @@ fn test_streak_reset_preserves_longest() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1649,7 +1649,7 @@ fn test_streak_reset_preserves_longest() {
         &String::from_str(&env, "Streak"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Labrador"),
         &String::from_str(&env, "Black"),
         &25,
@@ -1697,8 +1697,8 @@ fn test_activity_history_order_preserved() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1749,8 +1749,8 @@ fn test_activity_stats_respects_day_window() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1760,7 +1760,7 @@ fn test_activity_stats_respects_day_window() {
         &String::from_str(&env, "Window"),
         &String::from_str(&env, "2019-03-10"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Beagle"),
         &String::from_str(&env, "Tricolor"),
         &12,
@@ -1806,8 +1806,8 @@ fn test_streaks_are_isolated_per_pet() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1817,7 +1817,7 @@ fn test_streaks_are_isolated_per_pet() {
         &String::from_str(&env, "Alpha"),
         &String::from_str(&env, "2020-01-01"),
         &Gender::Male,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Husky"),
         &String::from_str(&env, "Gray"),
         &28,
@@ -1878,8 +1878,8 @@ fn test_get_activity_record_by_id_multiple_records() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register_contract(None, PetChainContract);
-    let client = PetChainContractClient::new(&env, &contract_id);
+    let contract_id = env.register_contract(None, CatChainContract);
+    let client = CatChainContractClient::new(&env, &contract_id);
 
     let owner = Address::generate(&env);
     client.init_admin(&owner);
@@ -1889,7 +1889,7 @@ fn test_get_activity_record_by_id_multiple_records() {
         &String::from_str(&env, "Multi"),
         &String::from_str(&env, "2022-02-14"),
         &Gender::Female,
-        &Species::Dog,
+        &Species::Cat,
         &String::from_str(&env, "Poodle"),
         &String::from_str(&env, "Apricot"),
         &8,
@@ -1957,8 +1957,8 @@ fn test_get_activity_record_by_id_multiple_records() {
         env.mock_all_auths();
         env.budget().reset_unlimited();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         client.init_admin(&owner);
@@ -1968,7 +1968,7 @@ fn test_get_activity_record_by_id_multiple_records() {
             &String::from_str(&env, "Cap-Test"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &String::from_str(&env, "Black"),
             &30,
@@ -2017,8 +2017,8 @@ fn test_get_activity_record_by_id_multiple_records() {
         env.mock_all_auths();
         env.budget().reset_unlimited();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         client.init_admin(&owner);
@@ -2028,7 +2028,7 @@ fn test_get_activity_record_by_id_multiple_records() {
             &String::from_str(&env, "No-Dup"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Beagle"),
             &String::from_str(&env, "Tri"),
             &12,

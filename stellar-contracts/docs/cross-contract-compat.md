@@ -6,11 +6,11 @@ Soroban environment and exercises the interfaces they share:
 
 | Contract | Source | How it is deployed in the test |
 |---|---|---|
-| Main (`PetChainContract`) | `src/lib.rs` | Release WASM (`PETCHAIN_MAIN_WASM`) |
-| Ownership / adoption / escrowed transfers (`PetOwnershipContract`) | `contracts/pet-transfer-adoption/src/lib.rs` | Native |
-| Vet registry (`VetRegistryContract`) | `contracts/pet-transfer-adoption/src/vet_registry.rs` | Native |
+| Main (`CatChainContract`) | `src/lib.rs` | Release WASM (`PETCHAIN_MAIN_WASM`) |
+| Ownership / adoption / escrowed transfers (`PetOwnershipContract`) | `contracts/cat-transfer-adoption/src/lib.rs` | Native |
+| Vet registry (`VetRegistryContract`) | `contracts/cat-transfer-adoption/src/vet_registry.rs` | Native |
 
-Tests live in `contracts/pet-transfer-adoption/src/test_cross_contract.rs` and
+Tests live in `contracts/cat-transfer-adoption/src/test_cross_contract.rs` and
 check authorization, error codes, events and state transitions across these
 contracts, including the ownership contract's trusted-main-contract binding.
 
@@ -43,8 +43,8 @@ The `fixture` module in that file fails when a shared interface drifts:
 ```bash
 cd stellar-contracts
 cargo build --target wasm32-unknown-unknown --release
-cd contracts/pet-transfer-adoption
-PETCHAIN_MAIN_WASM=$(realpath ../../../target/wasm32-unknown-unknown/release/petchain_stellar.wasm) \
+cd contracts/cat-transfer-adoption
+PETCHAIN_MAIN_WASM=$(realpath ../../../target/wasm32-unknown-unknown/release/catchain_stellar.wasm) \
   cargo test test_cross_contract -- --include-ignored
 ```
 

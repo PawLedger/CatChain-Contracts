@@ -3,7 +3,7 @@
 ## Repository Layout
 
 ```text
-PetChain-Contracts/
+CatChain-Contracts/
 ├── README.md
 ├── SECURITY.md
 ├── CONTRIBUTING.md
@@ -20,7 +20,7 @@ PetChain-Contracts/
 │   │   ├── lib.rs
 │   │   └── test_*.rs
 │   └── contracts/
-│       └── pet-transfer-adoption/
+│       └── cat-transfer-adoption/
 └── backend-2fa/
     ├── Cargo.toml
     ├── src/
@@ -35,16 +35,16 @@ PetChain-Contracts/
 
 ### `stellar-contracts`
 
-The main Soroban contract crate. It contains the primary PetChain smart contract, including:
+The main Soroban contract crate. It contains the primary CatChain smart contract, including:
 
-- pet registration and ownership
+- cat registration and ownership
 - veterinary access control
 - medical records, vaccinations, and attachments
 - emergency data and consent flows
 - activity, grooming, and insurance features
 - multisig admin and upgrade flows
 
-The nested `contracts/pet-transfer-adoption` package is a smaller ownership-transfer contract with its own tests.
+The nested `contracts/cat-transfer-adoption` package is a smaller ownership-transfer contract with its own tests.
 
 ### `backend-2fa`
 

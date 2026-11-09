@@ -12,8 +12,8 @@ mod test {
         env.mock_all_auths();
         env.budget().reset_unlimited();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let name = String::from_str(&env, "Buddy");
@@ -25,7 +25,7 @@ mod test {
             &name,
             &birthday,
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &breed,
             &PrivacyLevel::Public,
         );
@@ -42,8 +42,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let name = String::from_str(&env, "John Doe");
@@ -61,8 +61,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let vet = Address::generate(&env);
         let owner = Address::generate(&env);
@@ -71,7 +71,7 @@ mod test {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Retriever"),
             &PrivacyLevel::Public,
         );
@@ -121,8 +121,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let pet_id = client.register_pet(
@@ -130,7 +130,7 @@ mod test {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Golden Retriever"),
             &PrivacyLevel::Public,
         );
@@ -157,8 +157,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let pet_id = client.register_pet(
@@ -187,8 +187,8 @@ mod test {
     fn test_tag_id_uniqueness() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
 
@@ -197,7 +197,7 @@ mod test {
             &String::from_str(&env, "Dog1"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Husky"),
             &PrivacyLevel::Public,
         );
@@ -206,7 +206,7 @@ mod test {
             &String::from_str(&env, "Dog2"),
             &String::from_str(&env, "2020-01-02"),
             &Gender::Female,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Poodle"),
             &PrivacyLevel::Public,
         );
@@ -222,8 +222,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let pet_id = client.register_pet(
@@ -255,8 +255,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let vet = Address::generate(&env);
@@ -266,7 +266,7 @@ mod test {
             &String::from_str(&env, "Rex"),
             &String::from_str(&env, "2019-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Boxer"),
             &PrivacyLevel::Public,
         );
@@ -311,8 +311,8 @@ mod test {
     fn test_set_and_get_emergency_contacts() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let pet_id = client.register_pet(
@@ -320,7 +320,7 @@ mod test {
             &String::from_str(&env, "Max"),
             &String::from_str(&env, "2021-05-15"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &PrivacyLevel::Public,
         );
@@ -347,8 +347,8 @@ mod test {
     fn test_lab_results() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let vet = Address::generate(&env);
@@ -386,8 +386,8 @@ mod test {
     fn test_update_medical_record() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let vet = Address::generate(&env);
@@ -397,7 +397,7 @@ mod test {
             &String::from_str(&env, "Pet"),
             &String::from_str(&env, "2020"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Breed"),
             &PrivacyLevel::Public,
         );
@@ -494,8 +494,8 @@ mod test {
     fn test_update_medical_record_nonexistent() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let meds = Vec::new(&env);
         let success = client.update_medical_record(
@@ -514,8 +514,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let pet_id = client.register_pet(
@@ -523,7 +523,7 @@ mod test {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &PrivacyLevel::Public,
         );
@@ -545,8 +545,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let pet_id = client.register_pet(
@@ -554,7 +554,7 @@ mod test {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &PrivacyLevel::Public,
         );
@@ -578,8 +578,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let pet_id = client.register_pet(
@@ -587,7 +587,7 @@ mod test {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &PrivacyLevel::Public,
         );
@@ -610,8 +610,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
 
@@ -621,7 +621,7 @@ mod test {
                 &String::from_str(&env, "Pet"),
                 &String::from_str(&env, "2020-01-01"),
                 &Gender::Male,
-                &Species::Dog,
+                &Species::Cat,
                 &String::from_str(&env, "Breed"),
                 &PrivacyLevel::Public,
             );
@@ -647,8 +647,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let pet_id = client.register_pet(
@@ -656,7 +656,7 @@ mod test {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &PrivacyLevel::Public,
         );
@@ -666,7 +666,7 @@ mod test {
         client.report_sighting(
             &alert_id,
             &String::from_str(&env, "Near the fountain"),
-            &String::from_str(&env, "Saw a dog matching description"),
+            &String::from_str(&env, "Saw a cat matching description"),
         );
 
         let sightings = client.get_alert_sightings(&alert_id);
@@ -684,8 +684,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let owner = Address::generate(&env);
         let pet_id = client.register_pet(
@@ -693,7 +693,7 @@ mod test {
             &String::from_str(&env, "Buddy"),
             &String::from_str(&env, "2020-01-01"),
             &Gender::Male,
-            &Species::Dog,
+            &Species::Cat,
             &String::from_str(&env, "Labrador"),
             &PrivacyLevel::Public,
         );
@@ -709,8 +709,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let vet = Address::generate(&env);
         let admin = Address::generate(&env);
@@ -749,8 +749,8 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let vet = Address::generate(&env);
         let admin = Address::generate(&env);
@@ -782,8 +782,8 @@ mod test {
     #[test]
     fn test_get_version() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
 
         let version = client.get_version();
         assert_eq!(version.major, 1);
@@ -794,8 +794,8 @@ mod test {
     #[test]
     fn test_propose_upgrade() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         env.mock_all_auths();
 
         let admin = Address::generate(&env);
@@ -814,8 +814,8 @@ mod test {
     #[test]
     fn test_approve_upgrade() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         env.mock_all_auths();
 
         let admin = Address::generate(&env);
@@ -834,8 +834,8 @@ mod test {
     #[test]
     fn test_migrate_version() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         env.mock_all_auths();
 
         let admin = Address::generate(&env);
@@ -853,8 +853,8 @@ mod test {
     #[should_panic]
     fn test_upgrade_requires_admin() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, PetChainContract);
-        let client = PetChainContractClient::new(&env, &contract_id);
+        let contract_id = env.register_contract(None, CatChainContract);
+        let client = CatChainContractClient::new(&env, &contract_id);
         env.mock_all_auths();
 
         // No admin set - should panic

@@ -110,7 +110,7 @@ The transfer/adoption contract is audited with `twiggy` after building the
 Soroban Wasm target:
 
 ```bash
-cd stellar-contracts/contracts/pet-transfer-adoption
+cd stellar-contracts/contracts/cat-transfer-adoption
 cargo build --release --target wasm32-unknown-unknown
 twiggy top -n 12 target/wasm32-unknown-unknown/release/pet_transfer_adoption.wasm
 ```
