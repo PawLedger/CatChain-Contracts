@@ -1,0 +1,45 @@
+name: PR Review Bot
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: stellar-contracts
+    steps:
+      - uses: actions/checkout@v7
+      
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          toolchain: stable
+          
+      - name: Check formatting
+        run: cargo fmt --check
+          
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+          
+      - name: Run tests
+        run: cargo test
+          
+      - name: Comment PR
+        if: success() && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ All checks passed! Code looks good.'
+            })

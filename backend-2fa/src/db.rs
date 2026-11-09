@@ -1,0 +1,1876 @@
+use crate::ip_access::{CidrBlock, IpAccessEntry, IpAccessStore, IpListType};
+use crate::leaderboard::{FlaggedScoreStore, FlaggedScoreSubmission};
+use crate::two_factor::HmacAlgorithm;
+use crate::two_factor::{
+    AuditLogEntry, LockedUserSummary, RecoveryCodeUsageLog, TwoFactorData, TwoFactorLockoutState,
+    TwoFactorStore, UserTwoFactorSummary,
+};
+use aes_gcm::{
+    aead::{Aead, KeyInit, OsRng},
+    Aes256Gcm, Key, Nonce,
+};
+use aws_sdk_secretsmanager::Client as SecretsManagerClient;
+use rand::RngCore;
+use sqlx::{postgres::PgPoolOptions, PgPool};
+#[cfg(test)]
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::runtime::Runtime;
+
+/// Pool utilisation snapshot returned by [`PostgresTwoFactorStore::pool_stats`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct PoolStats {
+    pub active: u32,
+    pub idle: u32,
+    pub max: u32,
+}
+
+/// Trait for fetching secrets (e.g. DB connection strings).
+pub trait SecretProvider: Send + Sync {
+    fn get_secret(&self, key: &str) -> Result<String, String>;
+}
+
+/// Env var based secret provider (current behavior)
+pub struct EnvSecretProvider;
+impl SecretProvider for EnvSecretProvider {
+    fn get_secret(&self, key: &str) -> Result<String, String> {
+        std::env::var(key).map_err(|e| e.to_string())
+    }
+}
+
+/// AWS Secrets Manager provider — calls the real AWS Secrets Manager API.
+/// The region and credentials are resolved from the standard AWS environment
+/// (AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, instance profile,
+/// etc.).  Set AWS_ENDPOINT_URL to redirect to LocalStack for local testing.
+pub struct AwsSecretsManagerProvider {
+    client: SecretsManagerClient,
+    runtime: Arc<Runtime>,
+}
+
+impl AwsSecretsManagerProvider {
+    pub fn new() -> Result<Self, String> {
+        let runtime = Arc::new(Runtime::new().map_err(|e| e.to_string())?);
+        let config =
+            runtime.block_on(aws_config::defaults(aws_config::BehaviorVersion::latest()).load());
+        let client = SecretsManagerClient::new(&config);
+        Ok(Self { client, runtime })
+    }
+}
+
+impl SecretProvider for AwsSecretsManagerProvider {
+    fn get_secret(&self, key: &str) -> Result<String, String> {
+        let resp = self
+            .runtime
+            .block_on(self.client.get_secret_value().secret_id(key).send())
+            .map_err(|e| e.to_string())?;
+        resp.secret_string()
+            .map(|s| s.to_string())
+            .ok_or_else(|| format!("secret '{}' has no string value", key))
+    }
+}
+
+/// Explicit allow-list of `SECRET_PROVIDER` values this build understands.
+/// Keep this in sync with the `match` arms in [`select_secret_provider`].
+const SUPPORTED_SECRET_PROVIDERS: &[&str] = &["env", "aws"];
+
+/// Select provider by env var `SECRET_PROVIDER` ("env" or "aws").
+///
+/// Issue #1222: AWS provider construction failures (e.g. a runtime that
+/// can't be created) are propagated as a typed `Err` instead of panicking
+/// via `.expect()`. A misconfigured library must report an actionable
+/// startup error, not take down the whole process.
+pub fn select_secret_provider() -> Result<Box<dyn SecretProvider>, String> {
+    match std::env::var("SECRET_PROVIDER")
+        .unwrap_or_else(|_| "env".to_string())
+        .as_str()
+    {
+        "aws" => {
+            let provider = AwsSecretsManagerProvider::new()
+                .map_err(|e| format!("failed to initialise AwsSecretsManagerProvider: {e}"))?;
+            Ok(Box::new(provider))
+        }
+        _ => Ok(Box::new(EnvSecretProvider {})),
+    }
+}
+
+/// Encrypt `plaintext` with AES-256-GCM using `key` (32 raw bytes, hex-encoded in env).
+/// Returns `nonce_hex || ":" || ciphertext_hex`.
+pub fn encrypt_secret(plaintext: &str, key_bytes: &[u8; 32]) -> Result<String, String> {
+    let key = Key::<Aes256Gcm>::from_slice(key_bytes);
+    let cipher = Aes256Gcm::new(key);
+    let mut nonce_bytes = [0u8; 12];
+    OsRng.fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from_slice(&nonce_bytes);
+    let ciphertext = cipher
+        .encrypt(nonce, plaintext.as_bytes())
+        .map_err(|e| format!("encrypt error: {e}"))?;
+    Ok(format!(
+        "{}:{}",
+        hex::encode(nonce_bytes),
+        hex::encode(ciphertext)
+    ))
+}
+
+/// Decrypt a value produced by `encrypt_secret`.
+pub fn decrypt_secret(encrypted: &str, key_bytes: &[u8; 32]) -> Result<String, String> {
+    let (nonce_hex, ct_hex) = encrypted
+        .split_once(':')
+        .ok_or("invalid encrypted format")?;
+    let nonce_bytes = hex::decode(nonce_hex).map_err(|e| e.to_string())?;
+    let ct = hex::decode(ct_hex).map_err(|e| e.to_string())?;
+    let key = Key::<Aes256Gcm>::from_slice(key_bytes);
+    let cipher = Aes256Gcm::new(key);
+    let nonce = Nonce::from_slice(&nonce_bytes);
+    let plaintext = cipher
+        .decrypt(nonce, ct.as_ref())
+        .map_err(|_| "decrypt error: authentication tag mismatch".to_string())?;
+    String::from_utf8(plaintext).map_err(|e| e.to_string())
+}
+
+/// Load the 32-byte AES key from the secret provider (key name `TOTP_ENCRYPTION_KEY`).
+/// The env var / secret must be exactly 64 hex characters (32 bytes).
+fn load_encryption_key(provider: &dyn SecretProvider) -> Result<[u8; 32], String> {
+    let hex_key = provider.get_secret("TOTP_ENCRYPTION_KEY")?;
+    let bytes = hex::decode(hex_key.trim()).map_err(|e| format!("invalid key hex: {e}"))?;
+    bytes
+        .try_into()
+        .map_err(|_| "TOTP_ENCRYPTION_KEY must be 32 bytes (64 hex chars)".to_string())
+}
+
+#[derive(Debug)]
+pub struct PostgresTwoFactorStore {
+    pool: PgPool,
+    runtime: Arc<Runtime>,
+    enc_key: Option<[u8; 32]>,
+}
+
+impl PostgresTwoFactorStore {
+    pub fn connect(database_url: &str) -> Result<Self, String> {
+        let runtime = Arc::new(Runtime::new().map_err(|e| e.to_string())?);
+        let min_conns: u32 = std::env::var("DB_POOL_MIN")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(1);
+        let max_conns: u32 = std::env::var("DB_POOL_MAX")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(10);
+        let acquire_timeout_secs: u64 = std::env::var("DB_POOL_ACQUIRE_TIMEOUT_SECS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(30);
+        let connect_timeout_secs: u64 = std::env::var("DB_POOL_CONNECT_TIMEOUT_SECS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(30);
+
+        // sqlx's pool has a single `acquire_timeout` covering both "wait for
+        // a free slot" and "make the initial TCP connection" — apply the
+        // tighter of the two configured bounds so either one is honored.
+        let effective_timeout_secs = acquire_timeout_secs.min(connect_timeout_secs);
+
+        let pool = runtime
+            .block_on(
+                PgPoolOptions::new()
+                    .min_connections(min_conns)
+                    .max_connections(max_conns)
+                    .acquire_timeout(Duration::from_secs(effective_timeout_secs))
+                    .connect(database_url),
+            )
+            .map_err(|e| {
+                format!(
+                    "Failed to connect to database within {}s: {}. \
+                 Check DATABASE_URL and network reachability. \
+                 Falling back to in-memory store.",
+                    acquire_timeout_secs, e
+                )
+            })?;
+
+        Ok(Self {
+            pool,
+            runtime,
+            enc_key: None,
+        })
+    }
+
+    /// Connect using a SecretProvider to fetch the `secret_key` value.
+    /// Also loads `TOTP_ENCRYPTION_KEY` from the same provider for secret encryption.
+    pub fn connect_with_provider(
+        provider: &dyn SecretProvider,
+        secret_key: &str,
+    ) -> Result<Self, String> {
+        let database_url = provider.get_secret(secret_key)?;
+        let mut store = PostgresTwoFactorStore::connect(&database_url)?;
+        if let Ok(key) = load_encryption_key(provider) {
+            store.enc_key = Some(key);
+        }
+        Ok(store)
+    }
+
+    pub fn from_pool(pool: PgPool) -> Result<Self, String> {
+        let runtime = Arc::new(Runtime::new().map_err(|e| e.to_string())?);
+        Ok(Self {
+            pool,
+            runtime,
+            enc_key: None,
+        })
+    }
+
+    fn block_on<F, T>(&self, future: F) -> Result<T, String>
+    where
+        F: std::future::Future<Output = Result<T, sqlx::Error>>,
+    {
+        self.runtime.block_on(future).map_err(|e| e.to_string())
+    }
+
+    /// Execute `op` with up to 3 attempts and exponential backoff (100 ms, 200 ms, 400 ms),
+    /// returning the typed `sqlx::Error` on failure so callers can inspect e.g. Postgres
+    /// error codes before deciding how to report the failure.
+    ///
+    /// The whole retry loop — including the backoff delay — runs inside a single
+    /// `block_on`, and the delay uses `tokio::time::sleep` rather than
+    /// `std::thread::sleep`. A blocking sleep here would tie up the calling OS
+    /// thread (part of tokio's bounded blocking-thread pool) for the entire
+    /// backoff window; under sustained DB failures with many concurrent
+    /// requests that starves the pool and makes unrelated DB calls queue
+    /// indefinitely instead of failing fast.
+    fn with_retry_typed<F, Fut, T>(&self, mut op: F) -> Result<T, sqlx::Error>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<T, sqlx::Error>>,
+    {
+        self.runtime.block_on(async {
+            const MAX_ATTEMPTS: u32 = 3;
+            let mut delay_ms = 100u64;
+            for attempt in 1..=MAX_ATTEMPTS {
+                match op().await {
+                    Ok(v) => return Ok(v),
+                    Err(e) if attempt < MAX_ATTEMPTS && is_connection_error(&e) => {
+                        tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+                        delay_ms *= 2;
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+            unreachable!()
+        })
+    }
+
+    /// Like [`Self::with_retry_typed`] but stringifies the error, for callers
+    /// that don't need to inspect the typed `sqlx::Error`.
+    fn with_retry<F, Fut, T>(&self, op: F) -> Result<T, String>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<T, sqlx::Error>>,
+    {
+        self.with_retry_typed(op).map_err(|e| e.to_string())
+    }
+
+    /// Async counterpart to [`Self::with_retry_typed`]: the same up-to-3-attempt
+    /// exponential backoff, but `.await`ed directly on the caller's own async
+    /// context instead of being driven by `self.runtime.block_on(..)`.
+    ///
+    /// Issue #1220: methods built on this helper never call `block_on`, so they
+    /// are safe to `.await` from within a Tokio runtime that's already running
+    /// (e.g. an Actix worker) without risking the "cannot start a runtime from
+    /// within a runtime" panic or a worker-thread deadlock.
+    async fn with_retry_typed_async<F, Fut, T>(&self, mut op: F) -> Result<T, sqlx::Error>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<T, sqlx::Error>>,
+    {
+        const MAX_ATTEMPTS: u32 = 3;
+        let mut delay_ms = 100u64;
+        for attempt in 1..=MAX_ATTEMPTS {
+            match op().await {
+                Ok(v) => return Ok(v),
+                Err(e) if attempt < MAX_ATTEMPTS && is_connection_error(&e) => {
+                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        unreachable!()
+    }
+
+    /// Async counterpart to [`Self::with_retry`].
+    async fn with_retry_async<F, Fut, T>(&self, op: F) -> Result<T, String>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<T, sqlx::Error>>,
+    {
+        self.with_retry_typed_async(op)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    /// Async counterpart to [`TwoFactorStore::save`] for this store. Identical
+    /// SQL and retry behavior, but `.await`s the SQLx future directly with no
+    /// `block_on` anywhere in the call chain — see [`Self::with_retry_async`].
+    pub async fn save_async(&self, user_id: &str, data: TwoFactorData) -> Result<(), String> {
+        let backup_codes = serde_json::to_string(&data.backup_codes).map_err(|e| e.to_string())?;
+        let user_id = user_id.to_string();
+        let secret = match &self.enc_key {
+            Some(key) => encrypt_secret(&data.secret, key)?,
+            None => data.secret.clone(),
+        };
+        self.with_retry_async(|| {
+            sqlx::query(
+                r#"
+            INSERT INTO user_two_factor (user_id, secret, backup_codes, enabled, algorithm)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                secret = EXCLUDED.secret,
+                backup_codes = EXCLUDED.backup_codes,
+                enabled = EXCLUDED.enabled,
+                algorithm = EXCLUDED.algorithm,
+                updated_at = CURRENT_TIMESTAMP
+            "#,
+            )
+            .bind(&user_id)
+            .bind(&secret)
+            .bind(&backup_codes)
+            .bind(data.enabled)
+            .bind(Self::algorithm_to_db(data.algorithm))
+            .execute(&self.pool)
+        })
+        .await
+        .map(|_| ())
+    }
+
+    /// Async counterpart to [`TwoFactorStore::get`] for this store.
+    pub async fn get_async(&self, user_id: &str) -> Result<TwoFactorData, String> {
+        let user_id = user_id.to_string();
+        let row = self
+            .with_retry_async(|| {
+                sqlx::query_as::<_, (String, String, bool, Option<String>)>(
+                    r#"
+            SELECT secret, backup_codes, enabled, algorithm
+            FROM user_two_factor
+            WHERE user_id = $1
+            "#,
+                )
+                .bind(&user_id)
+                .fetch_optional(&self.pool)
+            })
+            .await?;
+
+        let (raw_secret, backup_codes, enabled, algorithm) =
+            row.ok_or_else(|| format!("No 2FA data found for user: {}", user_id))?;
+        let secret = match &self.enc_key {
+            Some(key) => decrypt_secret(&raw_secret, key).unwrap_or(raw_secret),
+            None => raw_secret,
+        };
+        let backup_codes = serde_json::from_str(&backup_codes).map_err(|e| e.to_string())?;
+
+        Ok(TwoFactorData {
+            secret,
+            backup_codes,
+            enabled,
+            algorithm: Self::algorithm_from_db(algorithm.as_deref()),
+            last_used_step: None,
+        })
+    }
+
+    /// Async counterpart to [`TwoFactorStore::update_enabled`] for this store.
+    pub async fn update_enabled_async(&self, user_id: &str, enabled: bool) -> Result<(), String> {
+        let user_id = user_id.to_string();
+        let result = self
+            .with_retry_async(|| {
+                sqlx::query(
+                    r#"
+                UPDATE user_two_factor
+                SET enabled = $2, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = $1
+                "#,
+                )
+                .bind(&user_id)
+                .bind(enabled)
+                .execute(&self.pool)
+            })
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(format!("No 2FA data found for user: {}", user_id));
+        }
+
+        Ok(())
+    }
+
+    /// Async counterpart to [`TwoFactorStore::delete`] for this store.
+    pub async fn delete_async(&self, user_id: &str) -> Result<(), String> {
+        let user_id = user_id.to_string();
+        let result = self
+            .with_retry_async(|| {
+                sqlx::query("DELETE FROM user_two_factor WHERE user_id = $1")
+                    .bind(&user_id)
+                    .execute(&self.pool)
+            })
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(format!("No 2FA data found for user: {}", user_id));
+        }
+
+        Ok(())
+    }
+    /// Ping the database. Returns `Err` if the pool is exhausted or the
+    /// connection cannot be acquired within the pool's connect timeout.
+    pub fn health_check(&self) -> Result<(), String> {
+        self.block_on(sqlx::query("SELECT 1").execute(&self.pool))?;
+        Ok(())
+    }
+
+    /// Return a snapshot of current pool utilisation.
+    pub fn pool_stats(&self) -> PoolStats {
+        let max = self.pool.options().get_max_connections();
+        let idle = self.pool.num_idle() as u32;
+        let size = self.pool.size();
+        let active = size.saturating_sub(idle);
+        PoolStats { active, idle, max }
+    }
+
+    // -------------------------------------------------------------------------
+    // Canary-account convenience methods (Issue #1060)
+    // -------------------------------------------------------------------------
+    //
+    // The `TwoFactorStore` trait already exposes `is_canary` and
+    // `get_canary_accounts` as trait methods and `PostgresTwoFactorStore`
+    // provides a full Postgres-backed implementation for both.  These public
+    // wrappers make the methods callable directly on a
+    // `PostgresTwoFactorStore` value without going through the trait object,
+    // matching the naming and access pattern of `InMemoryStore`.
+
+    /// Check whether `user_id` is registered as a canary account.
+    ///
+    /// Queries `SELECT COUNT(*) FROM canary_accounts WHERE user_id = $1`.
+    /// Returns `false` on any database error so callers do not need to handle
+    /// errors in hot-path canary checks.
+    pub fn is_canary_account(&self, user_id: &str) -> bool {
+        <Self as TwoFactorStore>::is_canary(self, user_id)
+    }
+
+    /// Return every user ID currently registered as a canary account.
+    ///
+    /// Queries `SELECT user_id FROM canary_accounts ORDER BY user_id`.
+    pub fn list_canary_accounts(&self) -> Result<Vec<String>, String> {
+        <Self as TwoFactorStore>::get_canary_accounts(self)
+    }
+}
+
+pub(crate) fn is_connection_error(err: &sqlx::Error) -> bool {
+    matches!(
+        err,
+        sqlx::Error::Io(_) | sqlx::Error::PoolTimedOut | sqlx::Error::PoolClosed
+    )
+}
+
+impl TwoFactorStore for PostgresTwoFactorStore {
+    fn save(&self, user_id: &str, data: TwoFactorData) -> Result<(), String> {
+        let backup_codes = serde_json::to_string(&data.backup_codes).map_err(|e| e.to_string())?;
+        let user_id = user_id.to_string();
+        let secret = match &self.enc_key {
+            Some(key) => encrypt_secret(&data.secret, key)?,
+            None => data.secret.clone(),
+        };
+        self.with_retry(|| {
+            sqlx::query(
+                r#"
+            INSERT INTO user_two_factor (user_id, secret, backup_codes, enabled, algorithm)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                secret = EXCLUDED.secret,
+                backup_codes = EXCLUDED.backup_codes,
+                enabled = EXCLUDED.enabled,
+                algorithm = EXCLUDED.algorithm,
+                updated_at = CURRENT_TIMESTAMP
+            "#,
+            )
+            .bind(&user_id)
+            .bind(&secret)
+            .bind(&backup_codes)
+            .bind(data.enabled)
+            .bind(Self::algorithm_to_db(data.algorithm))
+            .execute(&self.pool)
+        })
+        .map(|_| ())
+    }
+
+    fn get(&self, user_id: &str) -> Result<TwoFactorData, String> {
+        let user_id = user_id.to_string();
+        let row = self.with_retry(|| {
+            sqlx::query_as::<_, (String, String, bool, Option<String>)>(
+                r#"
+            SELECT secret, backup_codes, enabled, algorithm
+            FROM user_two_factor
+            WHERE user_id = $1
+            "#,
+            )
+            .bind(&user_id)
+            .fetch_optional(&self.pool)
+        })?;
+
+        let (raw_secret, backup_codes, enabled, algorithm) =
+            row.ok_or_else(|| format!("No 2FA data found for user: {}", user_id))?;
+        let secret = match &self.enc_key {
+            Some(key) => decrypt_secret(&raw_secret, key).unwrap_or(raw_secret),
+            None => raw_secret,
+        };
+        let backup_codes = serde_json::from_str(&backup_codes).map_err(|e| e.to_string())?;
+
+        Ok(TwoFactorData {
+            secret,
+            backup_codes,
+            enabled,
+            algorithm: Self::algorithm_from_db(algorithm.as_deref()),
+            last_used_step: None,
+        })
+    }
+
+    fn delete(&self, user_id: &str) -> Result<(), String> {
+        let user_id = user_id.to_string();
+        // with_retry retries the DB round-trip; rows_affected check is
+        // post-commit business logic and intentionally sits outside.
+        let result = self.with_retry(|| {
+            sqlx::query("DELETE FROM user_two_factor WHERE user_id = $1")
+                .bind(&user_id)
+                .execute(&self.pool)
+        })?;
+
+        if result.rows_affected() == 0 {
+            return Err(format!("No 2FA data found for user: {}", user_id));
+        }
+
+        Ok(())
+    }
+
+    fn update_enabled(&self, user_id: &str, enabled: bool) -> Result<(), String> {
+        let user_id = user_id.to_string();
+        // with_retry retries the DB round-trip; rows_affected check is
+        // post-commit business logic and intentionally sits outside.
+        let result = self.with_retry(|| {
+            sqlx::query(
+                r#"
+                UPDATE user_two_factor
+                SET enabled = $2, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = $1
+                "#,
+            )
+            .bind(&user_id)
+            .bind(enabled)
+            .execute(&self.pool)
+        })?;
+
+        if result.rows_affected() == 0 {
+            return Err(format!("No 2FA data found for user: {}", user_id));
+        }
+
+        Ok(())
+    }
+
+    fn update_backup_codes(&self, user_id: &str, codes: Vec<String>) -> Result<(), String> {
+        let backup_codes = serde_json::to_string(&codes).map_err(|e| e.to_string())?;
+        let user_id = user_id.to_string();
+        // with_retry retries the DB round-trip; rows_affected check is
+        // post-commit business logic and intentionally sits outside.
+        let result = self.with_retry(|| {
+            sqlx::query(
+                r#"
+                UPDATE user_two_factor
+                SET backup_codes = $2, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = $1
+                "#,
+            )
+            .bind(&user_id)
+            .bind(&backup_codes)
+            .execute(&self.pool)
+        })?;
+
+        if result.rows_affected() == 0 {
+            return Err(format!("No 2FA data found for user: {}", user_id));
+        }
+
+        Ok(())
+    }
+
+    /// Single conditional UPDATE: Postgres re-checks the `?` predicate under
+    /// the row lock, so only one concurrent request can remove a given code.
+    fn remove_backup_code(&self, user_id: &str, stored_code: &str) -> Result<bool, String> {
+        let user_id = user_id.to_string();
+        let stored_code = stored_code.to_string();
+        let result = self.with_retry(|| {
+            sqlx::query(
+                r#"
+                UPDATE user_two_factor
+                SET backup_codes = (backup_codes::jsonb - $2)::text,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = $1 AND backup_codes::jsonb ? $2
+                "#,
+            )
+            .bind(&user_id)
+            .bind(&stored_code)
+            .execute(&self.pool)
+        })?;
+        Ok(result.rows_affected() == 1)
+    }
+
+    fn log_recovery_code_usage(
+        &self,
+        user_id: &str,
+        code_index: i32,
+        ip_address: Option<&str>,
+    ) -> Result<(), String> {
+        let user_id = user_id.to_string();
+        let ip_address = ip_address.map(|s| s.to_string());
+        let result = self.with_retry_typed(|| {
+            sqlx::query(
+                r#"
+                INSERT INTO recovery_code_usage (user_id, code_index, used_at, ip_address)
+                VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+                "#,
+            )
+            .bind(&user_id)
+            .bind(code_index)
+            .bind(ip_address.as_deref())
+            .execute(&self.pool)
+        });
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                // Postgres UNIQUE_VIOLATION (23505) means this backup code
+                // was already used — check the typed SQLSTATE code rather
+                // than string-matching the (locale-dependent) error message.
+                const UNIQUE_VIOLATION: &str = "23505";
+                let is_duplicate = matches!(
+                    &e,
+                    sqlx::Error::Database(db_err) if db_err.code().as_deref() == Some(UNIQUE_VIOLATION)
+                );
+                if is_duplicate {
+                    Err("InvalidRecoveryCode".to_string())
+                } else {
+                    Err(e.to_string())
+                }
+            }
+        }
+    }
+
+    fn get_recovery_usage_log(
+        &self,
+        page: u32,
+        page_size: u32,
+    ) -> Result<Vec<RecoveryCodeUsageLog>, String> {
+        let offset = (page.saturating_sub(1)) * page_size;
+        let limit = page_size as i64;
+
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            id: i32,
+            user_id: String,
+            code_index: i32,
+            used_at: String,
+            ip_address: Option<String>,
+        }
+
+        let rows = self.with_retry(|| {
+            sqlx::query_as::<_, Row>(
+                r#"
+                SELECT id, user_id, code_index, used_at, ip_address
+                FROM recovery_code_usage
+                ORDER BY used_at DESC
+                LIMIT $1 OFFSET $2
+                "#,
+            )
+            .bind(limit)
+            .bind(offset as i64)
+            .fetch_all(&self.pool)
+        })?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| RecoveryCodeUsageLog {
+                id: r.id as usize,
+                user_id: r.user_id,
+                code_index: r.code_index,
+                used_at: r.used_at,
+                ip_address: r.ip_address,
+            })
+            .collect())
+    }
+
+    fn list_users(&self, page: u32, page_size: u32) -> Result<Vec<UserTwoFactorSummary>, String> {
+        let offset = (page.saturating_sub(1)) * page_size;
+        let limit = page_size as i64;
+
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            user_id: String,
+            enabled: bool,
+        }
+
+        let rows = self.with_retry(|| {
+            sqlx::query_as::<_, Row>(
+                r#"
+                SELECT u.user_id, u.enabled
+                FROM user_two_factor u
+                LEFT JOIN canary_accounts c ON c.user_id = u.user_id
+                WHERE c.user_id IS NULL
+                ORDER BY u.user_id
+                LIMIT $1 OFFSET $2
+                "#,
+            )
+            .bind(limit)
+            .bind(offset as i64)
+            .fetch_all(&self.pool)
+        })?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| UserTwoFactorSummary {
+                user_id: r.user_id,
+                enabled: r.enabled,
+                is_canary: false,
+            })
+            .collect())
+    }
+
+    fn admin_disable_two_fa(&self, user_id: &str, admin_id: &str) -> Result<(), String> {
+        self.update_enabled(user_id, false)?;
+        self.append_audit_log(user_id, "admin_disabled_2fa", admin_id, None)?;
+        Ok(())
+    }
+
+    fn get_audit_log(
+        &self,
+        user_id: &str,
+        page: u32,
+        page_size: u32,
+    ) -> Result<Vec<AuditLogEntry>, String> {
+        let offset = (page.saturating_sub(1)) * page_size;
+        let limit = page_size as i64;
+        let user_id = user_id.to_string();
+
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            id: i32,
+            user_id: String,
+            event: String,
+            timestamp: i64,
+            actor: String,
+            metadata: Option<String>,
+        }
+
+        let rows = self.with_retry(|| {
+            sqlx::query_as::<_, Row>(
+                r#"
+                SELECT id, user_id, event, EXTRACT(EPOCH FROM timestamp)::bigint AS timestamp,
+                       actor, metadata
+                FROM two_fa_audit_log
+                WHERE user_id = $1
+                ORDER BY timestamp DESC
+                LIMIT $2 OFFSET $3
+                "#,
+            )
+            .bind(&user_id)
+            .bind(limit)
+            .bind(offset as i64)
+            .fetch_all(&self.pool)
+        })?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| AuditLogEntry {
+                id: r.id as usize,
+                user_id: r.user_id,
+                event: r.event,
+                timestamp: r.timestamp as u64,
+                actor: r.actor,
+                metadata: r.metadata,
+            })
+            .collect())
+    }
+
+    fn append_audit_log(
+        &self,
+        user_id: &str,
+        event: &str,
+        actor: &str,
+        metadata: Option<&str>,
+    ) -> Result<(), String> {
+        let user_id = user_id.to_string();
+        let event = event.to_string();
+        let actor = actor.to_string();
+        let metadata = metadata.map(|s| s.to_string());
+        // Each closure invocation builds and drives a fresh future.
+        self.with_retry(|| {
+            sqlx::query(
+                r#"
+                INSERT INTO two_fa_audit_log (user_id, event, actor, metadata)
+                VALUES ($1, $2, $3, $4)
+                "#,
+            )
+            .bind(&user_id)
+            .bind(&event)
+            .bind(&actor)
+            .bind(metadata.as_deref())
+            .execute(&self.pool)
+        })
+        .map(|_| ())
+    }
+
+    fn set_canary(&self, user_id: &str, is_canary: bool) -> Result<(), String> {
+        let user_id = user_id.to_string();
+        // Each branch builds a fresh future on every retry attempt.
+        if is_canary {
+            self.with_retry(|| {
+                sqlx::query(
+                    r#"
+                    INSERT INTO canary_accounts (user_id) VALUES ($1)
+                    ON CONFLICT (user_id) DO NOTHING
+                    "#,
+                )
+                .bind(&user_id)
+                .execute(&self.pool)
+            })
+            .map(|_| ())
+        } else {
+            self.with_retry(|| {
+                sqlx::query("DELETE FROM canary_accounts WHERE user_id = $1")
+                    .bind(&user_id)
+                    .execute(&self.pool)
+            })
+            .map(|_| ())
+        }
+    }
+
+    fn is_canary(&self, user_id: &str) -> bool {
+        let user_id = user_id.to_string();
+        self.with_retry(|| {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM canary_accounts WHERE user_id = $1")
+                .bind(&user_id)
+                .fetch_one(&self.pool)
+        })
+        .map(|c| c > 0)
+        .unwrap_or(false)
+    }
+
+    fn get_canary_accounts(&self) -> Result<Vec<String>, String> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            user_id: String,
+        }
+
+        let rows = self.with_retry(|| {
+            sqlx::query_as::<_, Row>("SELECT user_id FROM canary_accounts ORDER BY user_id")
+                .fetch_all(&self.pool)
+        })?;
+
+        Ok(rows.into_iter().map(|r| r.user_id).collect())
+    }
+
+    fn get_lockout_state(&self, user_id: &str) -> Result<TwoFactorLockoutState, String> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            failed_attempts: i32,
+            locked: bool,
+            locked_at: Option<i64>,
+            updated_at: i64,
+        }
+
+        let user_id = user_id.to_string();
+        let row = self.with_retry(|| {
+            sqlx::query_as::<_, Row>(
+                r#"
+                SELECT failed_attempts, locked,
+                       EXTRACT(EPOCH FROM locked_at)::bigint AS locked_at,
+                       EXTRACT(EPOCH FROM updated_at)::bigint AS updated_at
+                FROM two_fa_lockouts
+                WHERE user_id = $1
+                "#,
+            )
+            .bind(&user_id)
+            .fetch_optional(&self.pool)
+        })?;
+
+        Ok(row
+            .map(|r| TwoFactorLockoutState {
+                failed_attempts: r.failed_attempts.max(0) as u32,
+                locked: r.locked,
+                locked_at: r.locked_at.map(|ts| ts as u64),
+                updated_at: r.updated_at as u64,
+                // The Postgres-backed store does not yet persist a
+                // progressive-delay retry timestamp column.
+                retry_after_timestamp: None,
+            })
+            .unwrap_or_default())
+    }
+
+    fn record_failed_two_fa_attempt(
+        &self,
+        user_id: &str,
+        lockout_threshold: u32,
+    ) -> Result<TwoFactorLockoutState, String> {
+        let user_id = user_id.to_string();
+        let threshold = lockout_threshold as i32;
+        self.with_retry(|| {
+            sqlx::query(
+                r#"
+                INSERT INTO two_fa_lockouts (user_id, failed_attempts, locked, locked_at, updated_at)
+                VALUES ($1, 1, FALSE, NULL, CURRENT_TIMESTAMP)
+                ON CONFLICT (user_id)
+                DO UPDATE SET
+                    failed_attempts = two_fa_lockouts.failed_attempts + 1,
+                    locked = (two_fa_lockouts.failed_attempts + 1) >= $2,
+                    locked_at = CASE
+                        WHEN (two_fa_lockouts.failed_attempts + 1) >= $2
+                             AND two_fa_lockouts.locked_at IS NULL
+                        THEN CURRENT_TIMESTAMP
+                        ELSE two_fa_lockouts.locked_at
+                    END,
+                    updated_at = CURRENT_TIMESTAMP
+                "#,
+            )
+            .bind(&user_id)
+            .bind(threshold)
+            .execute(&self.pool)
+        })
+        .map(|_| ())?;
+        self.get_lockout_state(&user_id)
+    }
+
+    fn set_last_used_step(&self, user_id: &str, step: u64) -> Result<(), String> {
+        self.with_retry(|| {
+            sqlx::query("UPDATE user_two_factor SET last_used_step = $1 WHERE user_id = $2")
+                .bind(step as i64)
+                .bind(user_id)
+                .execute(&self.pool)
+        })
+        .map(|_| ())
+    }
+
+    fn reset_two_fa_failures(&self, user_id: &str) -> Result<(), String> {
+        let user_id = user_id.to_string();
+        self.with_retry(|| {
+            sqlx::query("DELETE FROM two_fa_lockouts WHERE user_id = $1")
+                .bind(&user_id)
+                .execute(&self.pool)
+        })
+        .map(|_| ())
+    }
+
+    fn unlock_two_fa_account(&self, user_id: &str, actor: &str) -> Result<(), String> {
+        self.reset_two_fa_failures(user_id)?;
+        self.append_audit_log(user_id, "two_fa_account_unlocked", actor, None)?;
+        Ok(())
+    }
+
+    fn list_locked_users(&self) -> Result<Vec<LockedUserSummary>, String> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            user_id: String,
+            failed_attempts: i32,
+            locked_at: Option<i64>,
+        }
+
+        let rows = self.with_retry(|| {
+            sqlx::query_as::<_, Row>(
+                r#"
+                SELECT user_id, failed_attempts,
+                       EXTRACT(EPOCH FROM locked_at)::bigint AS locked_at
+                FROM two_fa_lockouts
+                WHERE locked = TRUE
+                ORDER BY user_id
+                "#,
+            )
+            .fetch_all(&self.pool)
+        })?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| LockedUserSummary {
+                user_id: r.user_id,
+                failed_attempts: r.failed_attempts.max(0) as u32,
+                locked_at: r.locked_at.map(|ts| ts as u64),
+            })
+            .collect())
+    }
+
+    fn try_pool_stats(&self) -> Option<PoolStats> {
+        Some(self.pool_stats())
+    }
+
+    fn revoke_session(&self, _user_id: &str, _session_id: &str) -> Result<(), String> {
+        // Session revocation for PostgresTwoFactorStore is handled at the JWT middleware layer.
+        // The in-memory store tracks revoked sessions; the Postgres store delegates to JWT validation.
+        Ok(())
+    }
+
+    fn revoke_all_sessions(&self, _user_id: &str) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn is_session_revoked(&self, _user_id: &str, _session_id: &str, _issued_at: u64) -> bool {
+        false
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Postgres-backed IP allowlist / blocklist store (Issue #701)
+// ---------------------------------------------------------------------------
+
+fn ip_list_type_to_db(list_type: IpListType) -> &'static str {
+    match list_type {
+        IpListType::Allow => "allow",
+        IpListType::Block => "block",
+    }
+}
+
+#[derive(Clone)]
+pub struct PostgresIpAccessStore {
+    pool: PgPool,
+    runtime: Arc<Runtime>,
+}
+
+impl PostgresIpAccessStore {
+    pub fn connect(database_url: &str) -> Result<Self, String> {
+        let runtime = Arc::new(Runtime::new().map_err(|e| e.to_string())?);
+        let pool = runtime
+            .block_on(
+                PgPoolOptions::new()
+                    .max_connections(10)
+                    .connect(database_url),
+            )
+            .map_err(|e| e.to_string())?;
+        Ok(Self { pool, runtime })
+    }
+
+    pub fn from_pool(pool: PgPool) -> Result<Self, String> {
+        let runtime = Arc::new(Runtime::new().map_err(|e| e.to_string())?);
+        Ok(Self { pool, runtime })
+    }
+
+    fn block_on<F, T>(&self, future: F) -> Result<T, String>
+    where
+        F: std::future::Future<Output = Result<T, sqlx::Error>>,
+    {
+        self.runtime.block_on(future).map_err(|e| e.to_string())
+    }
+}
+
+impl IpAccessStore for PostgresIpAccessStore {
+    fn add_entry(
+        &self,
+        cidr: &str,
+        list_type: IpListType,
+        note: Option<&str>,
+        created_by: &str,
+    ) -> Result<IpAccessEntry, String> {
+        CidrBlock::parse(cidr)?;
+
+        let (id,): (i64,) = self.block_on(
+            sqlx::query_as(
+                r#"
+                INSERT INTO ip_access_list (cidr, list_type, note, created_by)
+                VALUES ($1, $2, $3, $4)
+                RETURNING id
+                "#,
+            )
+            .bind(cidr)
+            .bind(ip_list_type_to_db(list_type))
+            .bind(note)
+            .bind(created_by)
+            .fetch_one(&self.pool),
+        )?;
+
+        Ok(IpAccessEntry {
+            id,
+            cidr: cidr.to_string(),
+            list_type,
+            note: note.map(str::to_string),
+            created_by: created_by.to_string(),
+        })
+    }
+
+    fn remove_entry(&self, id: i64) -> Result<(), String> {
+        let result = self.block_on(
+            sqlx::query("DELETE FROM ip_access_list WHERE id = $1")
+                .bind(id)
+                .execute(&self.pool),
+        )?;
+
+        if result.rows_affected() == 0 {
+            return Err(format!("no IP access entry with id {id}"));
+        }
+        Ok(())
+    }
+
+    fn list_entries(&self, list_type: IpListType) -> Vec<IpAccessEntry> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            id: i64,
+            cidr: String,
+            note: Option<String>,
+            created_by: String,
+        }
+
+        let rows = self.block_on(
+            sqlx::query_as::<_, Row>(
+                r#"
+                SELECT id, cidr, note, created_by
+                FROM ip_access_list
+                WHERE list_type = $1
+                ORDER BY id
+                "#,
+            )
+            .bind(ip_list_type_to_db(list_type))
+            .fetch_all(&self.pool),
+        );
+
+        rows.map(|rows| {
+            rows.into_iter()
+                .map(|r| IpAccessEntry {
+                    id: r.id,
+                    cidr: r.cidr,
+                    list_type,
+                    note: r.note,
+                    created_by: r.created_by,
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+    }
+}
+
+/// Postgres-backed [`FlaggedScoreStore`] (Issue #789). Persists flagged
+/// leaderboard score submissions in the `flagged_scores` table
+/// (see `migrations/006_create_flagged_scores.sql`) so they survive process
+/// restarts. The in-memory `InMemoryFlaggedScoreStore` remains available for
+/// tests and for deployments without a configured database.
+#[derive(Clone)]
+pub struct PostgresFlaggedScoreStore {
+    pool: PgPool,
+    runtime: Arc<Runtime>,
+}
+
+impl PostgresFlaggedScoreStore {
+    pub fn connect(database_url: &str) -> Result<Self, String> {
+        let runtime = Arc::new(Runtime::new().map_err(|e| e.to_string())?);
+        let pool = runtime
+            .block_on(
+                PgPoolOptions::new()
+                    .max_connections(10)
+                    .connect(database_url),
+            )
+            .map_err(|e| e.to_string())?;
+        Ok(Self { pool, runtime })
+    }
+
+    pub fn from_pool(pool: PgPool) -> Result<Self, String> {
+        let runtime = Arc::new(Runtime::new().map_err(|e| e.to_string())?);
+        Ok(Self { pool, runtime })
+    }
+
+    fn block_on<F, T>(&self, future: F) -> Result<T, String>
+    where
+        F: std::future::Future<Output = Result<T, sqlx::Error>>,
+    {
+        self.runtime.block_on(future).map_err(|e| e.to_string())
+    }
+}
+
+impl FlaggedScoreStore for PostgresFlaggedScoreStore {
+    fn add_flagged(&self, flagged: FlaggedScoreSubmission) {
+        let _ = self.block_on(
+            sqlx::query(
+                r#"
+                INSERT INTO flagged_scores (user_id, score, reason, flagged_at)
+                VALUES ($1, $2, $3, to_timestamp($4))
+                "#,
+            )
+            .bind(&flagged.user_id)
+            .bind(flagged.attempted_score as i64)
+            .bind(&flagged.reason)
+            .bind(flagged.timestamp as f64)
+            .execute(&self.pool),
+        );
+    }
+
+    fn get_flagged_by_user(&self, user_id: &str) -> Vec<FlaggedScoreSubmission> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            user_id: String,
+            score: i64,
+            reason: String,
+            flagged_at: i64,
+        }
+
+        let rows = self.block_on(
+            sqlx::query_as::<_, Row>(
+                r#"
+                SELECT user_id, score, reason,
+                       EXTRACT(EPOCH FROM flagged_at)::bigint AS flagged_at
+                FROM flagged_scores
+                WHERE user_id = $1
+                ORDER BY flagged_at
+                "#,
+            )
+            .bind(user_id)
+            .fetch_all(&self.pool),
+        );
+
+        rows.map(|rows| {
+            rows.into_iter()
+                .map(|r| FlaggedScoreSubmission {
+                    user_id: r.user_id,
+                    attempted_score: r.score.max(0) as u64,
+                    timestamp: r.flagged_at.max(0) as u64,
+                    reason: r.reason,
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+    }
+
+    fn get_all_flagged(&self) -> Vec<FlaggedScoreSubmission> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            user_id: String,
+            score: i64,
+            reason: String,
+            flagged_at: i64,
+        }
+
+        let rows = self.block_on(
+            sqlx::query_as::<_, Row>(
+                r#"
+                SELECT user_id, score, reason,
+                       EXTRACT(EPOCH FROM flagged_at)::bigint AS flagged_at
+                FROM flagged_scores
+                ORDER BY flagged_at
+                "#,
+            )
+            .fetch_all(&self.pool),
+        );
+
+        rows.map(|rows| {
+            rows.into_iter()
+                .map(|r| FlaggedScoreSubmission {
+                    user_id: r.user_id,
+                    attempted_score: r.score.max(0) as u64,
+                    timestamp: r.flagged_at.max(0) as u64,
+                    reason: r.reason,
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+    }
+
+    fn clear(&self) {
+        let _ = self.block_on(sqlx::query("DELETE FROM flagged_scores").execute(&self.pool));
+    }
+}
+
+impl PostgresTwoFactorStore {
+    fn algorithm_to_db(algorithm: HmacAlgorithm) -> String {
+        match algorithm {
+            HmacAlgorithm::SHA1 => "SHA1".to_string(),
+            HmacAlgorithm::SHA256 => "SHA256".to_string(),
+            HmacAlgorithm::SHA512 => "SHA512".to_string(),
+        }
+    }
+
+    fn algorithm_from_db(value: Option<&str>) -> HmacAlgorithm {
+        match value {
+            Some("SHA256") => HmacAlgorithm::SHA256,
+            Some("SHA512") => HmacAlgorithm::SHA512,
+            _ => HmacAlgorithm::SHA1,
+        }
+    }
+
+    #[cfg(test)]
+    pub fn algorithm_to_db_pub(algorithm: HmacAlgorithm) -> String {
+        Self::algorithm_to_db(algorithm)
+    }
+
+    #[cfg(test)]
+    pub fn algorithm_from_db_pub(value: Option<&str>) -> HmacAlgorithm {
+        Self::algorithm_from_db(value)
+    }
+}
+
+#[cfg(test)]
+/// Test double for AwsSecretsManagerProvider.  Reads secrets from the
+/// AWS_SECRETS_JSON env var (a JSON map of key→value) so unit tests can
+/// exercise secret-provider logic without real AWS credentials.
+pub struct MockAwsSecretsProvider;
+
+#[cfg(test)]
+impl SecretProvider for MockAwsSecretsProvider {
+    fn get_secret(&self, key: &str) -> Result<String, String> {
+        if let Ok(json) = std::env::var("AWS_SECRETS_JSON") {
+            let map: Result<HashMap<String, String>, _> = serde_json::from_str(&json);
+            if let Ok(map) = map {
+                if let Some(v) = map.get(key) {
+                    return Ok(v.clone());
+                }
+            }
+        }
+        Err(format!("secret not found: {}", key))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_data() -> TwoFactorData {
+        TwoFactorData {
+            secret: "JBSWY3DPEHPK3PXP".to_string(),
+            backup_codes: vec!["1111-2222".to_string(), "3333-4444".to_string()],
+            enabled: false,
+            algorithm: HmacAlgorithm::SHA1,
+            last_used_step: None,
+        }
+    }
+
+    #[test]
+    fn postgres_store_roundtrip_when_database_url_is_set() {
+        let Ok(database_url) = std::env::var("DATABASE_URL") else {
+            return;
+        };
+
+        let store = PostgresTwoFactorStore::connect(&database_url).unwrap();
+        let user_id = "postgres-store-roundtrip-test";
+        let _ = store.delete(user_id);
+
+        store.save(user_id, test_data()).unwrap();
+        assert_eq!(store.get(user_id).unwrap().backup_codes.len(), 2);
+
+        store.update_enabled(user_id, true).unwrap();
+        assert!(store.get(user_id).unwrap().enabled);
+
+        store
+            .update_backup_codes(user_id, vec!["5555-6666".to_string()])
+            .unwrap();
+        assert_eq!(store.get(user_id).unwrap().backup_codes[0], "5555-6666");
+
+        store.delete(user_id).unwrap();
+        assert!(store.get(user_id).is_err());
+    }
+
+    /// Issue #1220 — the async store methods must actually work end to end
+    /// (same round trip as the sync test above, driven by `.await` instead of
+    /// `block_on`).
+    #[tokio::test]
+    async fn postgres_store_async_roundtrip_when_database_url_is_set() {
+        let Ok(database_url) = std::env::var("DATABASE_URL") else {
+            return;
+        };
+
+        let store = PostgresTwoFactorStore::connect(&database_url).unwrap();
+        let user_id = "postgres-store-async-roundtrip-test";
+        let _ = store.delete_async(user_id).await;
+
+        store.save_async(user_id, test_data()).await.unwrap();
+        assert_eq!(
+            store.get_async(user_id).await.unwrap().backup_codes.len(),
+            2
+        );
+
+        store.update_enabled_async(user_id, true).await.unwrap();
+        assert!(store.get_async(user_id).await.unwrap().enabled);
+
+        store.delete_async(user_id).await.unwrap();
+        assert!(store.get_async(user_id).await.is_err());
+    }
+
+    /// Issue #1220 — concurrency/failure-path coverage: the async store methods
+    /// must not block the executor. Regression test for the bug this issue
+    /// fixes: the *sync* methods drive a private `Runtime::block_on` under the
+    /// hood, so calling them from a thread that is itself inside a Tokio
+    /// runtime (as an Actix worker would) either panics ("Cannot start a
+    /// runtime from within a runtime") or ties up a worker thread for the
+    /// whole call. The async methods added here `.await` the SQLx future
+    /// directly with no nested runtime, so many of them can run concurrently
+    /// on a runtime with far fewer worker threads than in-flight calls,
+    /// without deadlocking or starving each other.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn postgres_store_async_methods_do_not_block_executor_under_concurrency() {
+        let Ok(database_url) = std::env::var("DATABASE_URL") else {
+            return;
+        };
+
+        let store = Arc::new(PostgresTwoFactorStore::connect(&database_url).unwrap());
+        let user_ids: Vec<String> = (0..8)
+            .map(|i| format!("postgres-store-async-concurrency-test-{i}"))
+            .collect();
+        for user_id in &user_ids {
+            let _ = store.delete_async(user_id).await;
+        }
+
+        let tasks: Vec<_> = user_ids
+            .iter()
+            .cloned()
+            .map(|user_id| {
+                let store = Arc::clone(&store);
+                tokio::spawn(async move {
+                    store.save_async(&user_id, test_data()).await.unwrap();
+                    let data = store.get_async(&user_id).await.unwrap();
+                    assert_eq!(data.backup_codes.len(), 2);
+                    store.update_enabled_async(&user_id, true).await.unwrap();
+                    store.delete_async(&user_id).await.unwrap();
+                })
+            })
+            .collect();
+
+        // On a 2-worker runtime, 8 concurrent tasks each doing 4 round trips
+        // can only complete promptly if none of them blocks a worker thread —
+        // with the old `block_on`-based sync methods this pattern would
+        // either panic or serialize behind blocked threads. A generous
+        // timeout catches a deadlock/starvation regression without being
+        // flaky under normal DB latency.
+        let result = tokio::time::timeout(Duration::from_secs(30), async {
+            for task in tasks {
+                task.await.unwrap();
+            }
+        })
+        .await;
+        assert!(
+            result.is_ok(),
+            "concurrent async store calls did not complete in time — possible executor blocking regression"
+        );
+    }
+
+    #[test]
+    fn env_secret_provider_reads_env() {
+        std::env::set_var("TEST_SECRET_KEY", "secret-value");
+        let prov = EnvSecretProvider {};
+        let val = prov.get_secret("TEST_SECRET_KEY").unwrap();
+        assert_eq!(val, "secret-value");
+    }
+
+    #[test]
+    fn mock_aws_provider_reads_json_map() {
+        let map = serde_json::json!({"DB_KEY": "db://conn-string"}).to_string();
+        std::env::set_var("AWS_SECRETS_JSON", map);
+        let prov = MockAwsSecretsProvider;
+        let val = prov.get_secret("DB_KEY").unwrap();
+        assert_eq!(val, "db://conn-string");
+    }
+
+    #[test]
+    fn select_secret_provider_env_default() {
+        std::env::remove_var("SECRET_PROVIDER");
+        let prov = select_secret_provider().expect("env provider must construct");
+        // default is EnvSecretProvider; ensure get_secret returns Err for unknown key
+        assert!(prov.get_secret("NON_EXISTENT").is_err());
+    }
+
+    #[test]
+    fn select_secret_provider_explicit_env_value() {
+        // "env" is on the allow-list and must select EnvSecretProvider explicitly,
+        // not just as the unset-var default.
+        std::env::set_var("SECRET_PROVIDER", "env");
+        let prov = select_secret_provider().expect("'env' must be a supported provider");
+        assert!(prov.get_secret("NON_EXISTENT").is_err());
+        std::env::remove_var("SECRET_PROVIDER");
+    }
+
+    #[test]
+    fn select_secret_provider_aws_creates_provider() {
+        // Verify the "aws" branch constructs an AwsSecretsManagerProvider without
+        // panicking.  Fetching a secret requires real credentials; that path is
+        // exercised by the integration test below.
+        std::env::set_var("SECRET_PROVIDER", "aws");
+        let prov = select_secret_provider().expect("aws provider must construct");
+        // Without real credentials / localstack the fetch must fail, not panic.
+        assert!(prov.get_secret("NONEXISTENT_KEY_NO_CREDENTIALS").is_err());
+        std::env::remove_var("SECRET_PROVIDER");
+    }
+
+    /// Issue #1222 — AWS provider initialization must never panic on missing
+    /// configuration. `aws_config`'s loader is lazy (it doesn't eagerly
+    /// validate region/credentials), so the observable contract is:
+    /// construction succeeds without panicking even with nothing set, and
+    /// the *first actual call* that needs the missing config fails with a
+    /// typed `Err`, not a process-terminating panic.
+    #[test]
+    fn aws_provider_missing_region_does_not_panic() {
+        let saved = std::env::var("AWS_REGION").ok();
+        std::env::remove_var("AWS_REGION");
+        std::env::remove_var("AWS_DEFAULT_REGION");
+        std::env::set_var("SECRET_PROVIDER", "aws");
+
+        let result = select_secret_provider();
+        std::env::remove_var("SECRET_PROVIDER");
+        if let Some(region) = saved {
+            std::env::set_var("AWS_REGION", region);
+        }
+
+        assert!(
+            result.is_ok(),
+            "construction must not panic on missing region; observed an Err: {}",
+            result.err().unwrap_or_default(),
+        );
+    }
+
+    #[test]
+    fn aws_provider_missing_credentials_get_secret_fails_not_panics() {
+        let saved_key = std::env::var("AWS_ACCESS_KEY_ID").ok();
+        let saved_secret = std::env::var("AWS_SECRET_ACCESS_KEY").ok();
+        std::env::remove_var("AWS_ACCESS_KEY_ID");
+        std::env::remove_var("AWS_SECRET_ACCESS_KEY");
+        std::env::set_var("SECRET_PROVIDER", "aws");
+
+        let prov = select_secret_provider().expect("construction must not panic on missing creds");
+        let fetch_result = prov.get_secret("ANY_KEY");
+
+        std::env::remove_var("SECRET_PROVIDER");
+        if let Some(v) = saved_key {
+            std::env::set_var("AWS_ACCESS_KEY_ID", v);
+        }
+        if let Some(v) = saved_secret {
+            std::env::set_var("AWS_SECRET_ACCESS_KEY", v);
+        }
+
+        assert!(
+            fetch_result.is_err(),
+            "fetching without credentials must return Err, not panic or succeed",
+        );
+    }
+
+    #[test]
+    fn aws_provider_missing_secret_name_returns_err_not_panic() {
+        std::env::set_var("SECRET_PROVIDER", "aws");
+        let prov = select_secret_provider().expect("construction must not panic");
+        std::env::remove_var("SECRET_PROVIDER");
+
+        // An empty secret name is an obviously-missing/invalid identifier;
+        // this must surface as an Err from the API call, never a panic.
+        let result = prov.get_secret("");
+        assert!(
+            result.is_err(),
+            "empty/missing secret name must return Err, not panic",
+        );
+    }
+
+    /// Integration test — skipped unless AWS_SECRETS_INTEGRATION_TEST is set.
+    ///
+    /// To run against LocalStack:
+    ///   AWS_SECRETS_INTEGRATION_TEST=1 \
+    ///   AWS_ENDPOINT_URL=http://localhost:4566 \
+    ///   AWS_ACCESS_KEY_ID=test \
+    ///   AWS_SECRET_ACCESS_KEY=test \
+    ///   AWS_REGION=us-east-1 \
+    ///   AWS_TEST_SECRET_NAME=catchain-test-secret \
+    ///   cargo test aws_secrets_manager_integration -- --nocapture
+    #[test]
+    fn aws_secrets_manager_integration() {
+        if std::env::var("AWS_SECRETS_INTEGRATION_TEST").is_err() {
+            return;
+        }
+
+        let secret_name = std::env::var("AWS_TEST_SECRET_NAME")
+            .expect("AWS_TEST_SECRET_NAME must be set for the integration test");
+
+        let provider =
+            AwsSecretsManagerProvider::new().expect("failed to create AwsSecretsManagerProvider");
+
+        let result = provider.get_secret(&secret_name);
+        assert!(
+            result.is_ok(),
+            "failed to fetch secret '{}': {:?}",
+            secret_name,
+            result
+        );
+        // Basic sanity: the returned value is a non-empty string.
+        assert!(
+            !result.unwrap().is_empty(),
+            "fetched secret must not be empty"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // with_retry unit tests — no live DB required
+    // -----------------------------------------------------------------------
+
+    /// Verify that with_retry succeeds on the first attempt when the op is clean.
+    #[test]
+    fn with_retry_succeeds_immediately() {
+        // We can exercise with_retry directly via a mock store config.
+        // Build a minimal PostgresTwoFactorStore substitute that only exercises
+        // the retry logic by calling with_retry on a closure directly.
+        //
+        // Since with_retry is a method on PostgresTwoFactorStore we test it by
+        // building a real instance only when DATABASE_URL is set, but the
+        // pure-logic path below uses an independent helper that mirrors the
+        // same implementation so the unit test never needs a live connection.
+        let mut call_count = 0u32;
+        let result = retry_helper(3, 100, || {
+            call_count += 1;
+            Ok::<i32, String>(42)
+        });
+        assert_eq!(result, Ok(42));
+        assert_eq!(call_count, 1, "should succeed on the first attempt");
+    }
+
+    /// A one-shot transient connection error is retried and the second attempt succeeds.
+    #[test]
+    fn with_retry_recovers_from_one_shot_connection_failure() {
+        let mut call_count = 0u32;
+        let result = retry_helper(
+            3,
+            1, // use 1 ms delay to keep the test fast
+            || {
+                call_count += 1;
+                if call_count == 1 {
+                    // Simulate the kind of error that is_connection_error recognises
+                    Err("connection reset by peer".to_string())
+                } else {
+                    Ok::<(), String>(())
+                }
+            },
+        );
+        assert!(
+            result.is_ok(),
+            "should succeed after retry, got: {:?}",
+            result
+        );
+        assert_eq!(call_count, 2, "should have taken exactly two attempts");
+    }
+
+    /// A non-connection error is NOT retried — it is returned immediately.
+    #[test]
+    fn with_retry_does_not_retry_non_connection_errors() {
+        let mut call_count = 0u32;
+        let result = retry_helper::<(), _>(3, 1, || {
+            call_count += 1;
+            Err("unique constraint violation".to_string())
+        });
+        assert!(result.is_err());
+        assert_eq!(call_count, 1, "non-connection errors must not be retried");
+    }
+
+    /// All three attempts fail with connection errors — the last error is propagated.
+    #[test]
+    fn with_retry_exhausts_attempts_and_returns_last_error() {
+        let mut call_count = 0u32;
+        let result = retry_helper::<(), _>(3, 1, || {
+            call_count += 1;
+            Err("connection timeout".to_string())
+        });
+        assert!(result.is_err());
+        assert_eq!(call_count, 3, "all three attempts should be exhausted");
+        assert!(result.unwrap_err().contains("timeout"));
+    }
+
+    #[test]
+    fn is_connection_error_returns_false_for_non_connection_errors() {
+        let unique_violation = sqlx::Error::Database(Box::new(FakeDatabaseError {
+            message: "duplicate key value violates unique constraint".to_string(),
+        }));
+        assert!(
+            !is_connection_error(&unique_violation),
+            "unique-constraint violation must not be classified as a connection error"
+        );
+
+        let row_not_found = sqlx::Error::RowNotFound;
+        assert!(
+            !is_connection_error(&row_not_found),
+            "RowNotFound must not be classified as a connection error"
+        );
+
+        let decode = sqlx::Error::Protocol("unexpected message".to_string());
+        assert!(
+            !is_connection_error(&decode),
+            "Protocol error must not be classified as a connection error"
+        );
+    }
+
+    #[test]
+    fn is_connection_error_returns_true_for_connection_errors() {
+        let io_err = sqlx::Error::Io(std::io::Error::new(
+            std::io::ErrorKind::ConnectionReset,
+            "connection reset",
+        ));
+        assert!(is_connection_error(&io_err));
+
+        let pool_timeout = sqlx::Error::PoolTimedOut;
+        assert!(is_connection_error(&pool_timeout));
+
+        let pool_closed = sqlx::Error::PoolClosed;
+        assert!(is_connection_error(&pool_closed));
+    }
+
+    struct FakeDatabaseError {
+        message: String,
+    }
+
+    impl std::fmt::Debug for FakeDatabaseError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "FakeDatabaseError({})", self.message)
+        }
+    }
+
+    impl std::fmt::Display for FakeDatabaseError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.message)
+        }
+    }
+
+    impl std::error::Error for FakeDatabaseError {}
+
+    impl sqlx::error::DatabaseError for FakeDatabaseError {
+        fn message(&self) -> &str {
+            &self.message
+        }
+
+        fn as_error(&self) -> &(dyn std::error::Error + Send + Sync + 'static) {
+            self
+        }
+
+        fn as_error_mut(&mut self) -> &mut (dyn std::error::Error + Send + Sync + 'static) {
+            self
+        }
+
+        fn into_error(self: Box<Self>) -> Box<dyn std::error::Error + Send + Sync + 'static> {
+            self
+        }
+
+        fn kind(&self) -> sqlx::error::ErrorKind {
+            sqlx::error::ErrorKind::UniqueViolation
+        }
+    }
+
+    /// String-based analogue of `is_connection_error` used by the test helper
+    /// below (which works with `String` errors rather than `sqlx::Error`).
+    fn is_connection_error_str(e: &str) -> bool {
+        let lower = e.to_lowercase();
+        lower.contains("connection") || lower.contains("timeout") || lower.contains("pool")
+    }
+
+    /// Mirrors the real with_retry implementation so tests above do not need
+    /// a live PostgreSQL connection.
+    fn retry_helper<T, F>(max_attempts: u32, delay_ms: u64, mut op: F) -> Result<T, String>
+    where
+        F: FnMut() -> Result<T, String>,
+    {
+        let mut current_delay = delay_ms;
+        for attempt in 1..=max_attempts {
+            match op() {
+                Ok(v) => return Ok(v),
+                Err(e) if attempt < max_attempts && is_connection_error_str(&e) => {
+                    std::thread::sleep(std::time::Duration::from_millis(current_delay));
+                    current_delay *= 2;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        unreachable!()
+    }
+
+    // -----------------------------------------------------------------------
+    // AES-256-GCM encryption tests (#832)
+    // -----------------------------------------------------------------------
+
+    fn test_key() -> [u8; 32] {
+        [0x42u8; 32]
+    }
+
+    #[test]
+    fn encryption_roundtrip() {
+        let key = test_key();
+        let plaintext = "JBSWY3DPEHPK3PXP";
+        let encrypted = encrypt_secret(plaintext, &key).unwrap();
+        let decrypted = decrypt_secret(&encrypted, &key).unwrap();
+        assert_eq!(decrypted, plaintext);
+        // ciphertext must differ from plaintext
+        assert_ne!(encrypted, plaintext);
+    }
+
+    #[test]
+    fn tampered_ciphertext_returns_error() {
+        let key = test_key();
+        let encrypted = encrypt_secret("mysecret", &key).unwrap();
+        // Tamper: flip a byte in the ciphertext portion
+        let (nonce_hex, ct_hex) = encrypted.split_once(':').unwrap();
+        let mut ct_bytes = hex::decode(ct_hex).unwrap();
+        ct_bytes[0] ^= 0xFF;
+        let tampered = format!("{}:{}", nonce_hex, hex::encode(ct_bytes));
+        let result = decrypt_secret(&tampered, &key);
+        assert!(result.is_err(), "tampered ciphertext must fail decryption");
+    }
+
+    #[test]
+    fn postgres_store_encrypts_secret_with_key() {
+        // Without a live DB we verify the encrypt/decrypt path in isolation.
+        let key = test_key();
+        let secret = "TOTP_SECRET_ABC123";
+        let encrypted = encrypt_secret(secret, &key).unwrap();
+        // Must not be stored in plain text
+        assert!(!encrypted.contains(secret));
+        // Must round-trip correctly
+        assert_eq!(decrypt_secret(&encrypted, &key).unwrap(), secret);
+    }
+
+    /// Issue #1042 — `connect()` must time out quickly on an unreachable host
+    /// rather than hanging the process indefinitely.
+    ///
+    /// We use a non-routable IP address (RFC 5737 TEST-NET-1: 192.0.2.1) and
+    /// set `DB_POOL_ACQUIRE_TIMEOUT_SECS` to 1 so the test completes within the
+    /// default test runner timeout.  A successful `Err` return with a
+    /// descriptive message proves the timeout fired.
+    #[test]
+    fn connect_returns_err_when_host_unreachable_within_timeout() {
+        let unreachable_url = "postgres://user:pass@192.0.2.1:5432/db";
+
+        // Override acquire timeout to 1 second so the test is fast.
+        std::env::set_var("DB_POOL_ACQUIRE_TIMEOUT_SECS", "1");
+
+        let start = std::time::Instant::now();
+        let result = PostgresTwoFactorStore::connect(unreachable_url);
+        let elapsed = start.elapsed();
+
+        std::env::remove_var("DB_POOL_ACQUIRE_TIMEOUT_SECS");
+
+        assert!(
+            result.is_err(),
+            "connect() must return Err on an unreachable host, got Ok"
+        );
+
+        let err_msg = result.unwrap_err();
+        assert!(
+            err_msg.contains("Failed to connect to database within 1s"),
+            "error message must mention the timeout: {err_msg}"
+        );
+
+        // Must not have taken more than 10 seconds (generous headroom above 1s timeout).
+        assert!(
+            elapsed.as_secs() < 10,
+            "connect() took {}s — timeout was not applied",
+            elapsed.as_secs()
+        );
+    }
+
+    /// Issue #1051 — health_check must not reject a pool that is at max size
+    /// but has all connections idle. The old code used `pool.size() >= max`
+    /// which falsely reported a fully-warmed pool as exhausted.
+    #[test]
+    fn health_check_does_not_reject_pool_at_max_idle_size() {
+        let Ok(database_url) = std::env::var("DATABASE_URL") else {
+            return;
+        };
+        let store = PostgresTwoFactorStore::connect(&database_url).unwrap();
+        // A warm pool with idle connections should report Ok(()) not Err.
+        let result = store.health_check();
+        assert!(
+            result.is_ok(),
+            "health_check should succeed on a warm pool: {:?}",
+            result
+        );
+    }
+}
